@@ -27,6 +27,8 @@ struct ContentView: View {
     @State private var shareImage: ShareImage?
     @State private var notice: Notice?
     @State private var showExitOptions = false
+    @State private var showSplash = true
+    @State private var currentIdea: String?
 
     var body: some View {
         ZStack {
@@ -49,8 +51,21 @@ struct ContentView: View {
                 archiveView
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             }
+
+            if showSplash {
+                DoodlersClubSplash()
+                    .transition(.opacity)
+                    .zIndex(10)
+            }
         }
         .preferredColorScheme(.light)
+        .task {
+            guard showSplash else { return }
+            try? await Task.sleep(nanoseconds: 1_850_000_000)
+            withAnimation(.easeInOut(duration: 0.65)) {
+                showSplash = false
+            }
+        }
         .onReceive(timer) { now in
             updateTimer(now: now)
         }
@@ -153,13 +168,19 @@ struct ContentView: View {
         VStack(spacing: 0) {
             roundHeader(showClose: true)
 
-            ScribbleSurface(
-                scribble: scribble,
-                revealProgress: 1,
-                drawing: $drawing,
-                isDrawingEnabled: true,
-                canvasSize: $canvasSize
-            )
+            ZStack(alignment: .bottomTrailing) {
+                ScribbleSurface(
+                    scribble: scribble,
+                    revealProgress: 1,
+                    drawing: $drawing,
+                    isDrawingEnabled: true,
+                    canvasSize: $canvasSize
+                )
+
+                IdeaBox(idea: currentIdea, action: refreshIdea)
+                    .padding(.trailing, 18)
+                    .padding(.bottom, 18)
+            }
         }
     }
 
@@ -333,6 +354,7 @@ struct ContentView: View {
         deadline = nil
         resultImage = nil
         savedRecord = nil
+        currentIdea = nil
         revealProgress = 0
 
         withAnimation(.easeOut(duration: 0.22)) {
@@ -394,6 +416,10 @@ struct ContentView: View {
         resultImage = nil
         savedRecord = nil
         returnHome()
+    }
+
+    private func refreshIdea() {
+        currentIdea = IdeaBank.random(excluding: currentIdea)
     }
 
     private func returnHome() {
@@ -458,6 +484,40 @@ struct ContentView: View {
     }
 }
 
+private struct DoodlersClubSplash: View {
+    @State private var inkVisible = false
+
+    var body: some View {
+        ZStack {
+            NotebookBackground()
+
+            VStack(spacing: 18) {
+                Image("DoodlersClubMark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 154, height: 154)
+                    .accessibilityHidden(true)
+
+                Text("The Doodler's Club")
+                    .font(.doodleTitle(39))
+                    .foregroundStyle(Ink.black)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, 28)
+            .opacity(inkVisible ? 1 : 0)
+            .scaleEffect(inkVisible ? 1 : 0.96)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("The Doodler's Club")
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.7)) {
+                inkVisible = true
+            }
+        }
+    }
+}
+
 private struct ScribbleSurface: View {
     let scribble: Scribble
     let revealProgress: CGFloat
@@ -485,6 +545,73 @@ private struct ScribbleSurface: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
         .accessibilityLabel("Scribble drawing canvas")
+    }
+}
+
+private struct IdeaBox: View {
+    let idea: String?
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                HandDrawnBox()
+                    .fill(NotebookColors.paper.opacity(0.96))
+
+                HandDrawnBox()
+                    .stroke(
+                        Ink.black,
+                        style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round)
+                    )
+
+                VStack(spacing: 4) {
+                    Text("Idea Box")
+                        .font(.doodleTitle(18))
+                        .foregroundStyle(Ink.black)
+
+                    HandUnderline()
+                        .stroke(Ink.blue, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                        .frame(width: 58, height: 5)
+
+                    Text(idea ?? "tap for idea")
+                        .font(.doodleBody(17))
+                        .foregroundStyle(idea == nil ? Ink.black.opacity(0.65) : Ink.blue)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.68)
+                        .frame(maxWidth: 86)
+                }
+                .padding(9)
+            }
+            .frame(width: 112, height: 112)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(idea.map { "Idea Box. Current idea: \($0). Tap for another idea." }
+            ?? "Idea Box. Tap for a drawing idea.")
+    }
+}
+
+private struct HandDrawnBox: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + 5, y: rect.minY + 8))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX - 7, y: rect.minY + 4),
+            control: CGPoint(x: rect.midX, y: rect.minY + 1)
+        )
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX - 4, y: rect.maxY - 7),
+            control: CGPoint(x: rect.maxX, y: rect.midY)
+        )
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX + 7, y: rect.maxY - 4),
+            control: CGPoint(x: rect.midX, y: rect.maxY)
+        )
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX + 5, y: rect.minY + 8),
+            control: CGPoint(x: rect.minX + 1, y: rect.midY)
+        )
+        path.closeSubpath()
+        return path
     }
 }
 
@@ -835,6 +962,7 @@ private enum NotebookColors {
 private enum Ink {
     static let black = Color(red: 0.07, green: 0.07, blue: 0.065)
     static let scribble = Color(red: 0.34, green: 0.34, blue: 0.33)
+    static let blue = Color(red: 0.10, green: 0.35, blue: 0.60)
     static let red = Color(red: 0.78, green: 0.16, blue: 0.14)
 }
 
@@ -854,6 +982,24 @@ private enum AppScreen {
     case drawing
     case result
     case archive
+}
+
+private enum IdeaBank {
+    private static let ideas = [
+        "airplane", "clock", "anchor", "astronaut", "backpack", "balloon",
+        "bicycle", "cupcake", "camera", "castle", "catapult", "cactus",
+        "dragon", "drum", "flashlight", "flowerpot", "fountain", "guitar",
+        "hamburger", "helicopter", "jellyfish", "kite", "lighthouse", "mailbox",
+        "microscope", "monster", "mushroom", "octopus", "pirate", "popcorn",
+        "racecar", "rainbow", "robot", "rocket", "sandcastle", "sandwich",
+        "seahorse", "sneaker", "spaceship", "submarine", "teapot", "telescope",
+        "treehouse", "trophy", "umbrella", "volcano", "whale", "windmill"
+    ]
+
+    static func random(excluding excluded: String?) -> String {
+        let choices = ideas.filter { $0 != excluded }
+        return choices.randomElement() ?? ideas[0]
+    }
 }
 
 private struct DoodleRecord: Codable, Identifiable, Hashable {

@@ -4,8 +4,10 @@ Just Doodle is a SwiftUI iOS app for turning one imperfect line into something u
 
 ## Version 1 Flow
 
+- Fade from a handwritten "The Doodler's Club" splash into the home screen.
 - Tap the central dot to reveal a curated scribble.
 - Draw for one fixed three-minute session.
+- Tap the hand-drawn Idea Box whenever inspiration runs dry for a fresh one-word prompt.
 - Use one black PencilKit pen with no eraser, undo, or visible tool picker.
 - Freeze and save the drawing automatically when time expires.
 - Browse completed drawings in a date-ordered local Doodle Book.
