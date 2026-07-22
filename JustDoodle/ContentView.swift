@@ -5,67 +5,75 @@ import SwiftUI
 import UIKit
 
 struct ContentView: View {
-    private static let roundLength = 240
-    private static let prompts = [
-        "Airplane", "Backpack", "Bicycle", "Birthday", "Camera", "Castle",
-        "Cat", "Cloud", "Crown", "Dinosaur", "Dragon", "Flower", "Guitar",
-        "Hamburger", "Hat", "House", "Icecream", "Jellyfish", "Key", "Lamp",
-        "Lighthouse", "Monster", "Moon", "Octopus", "Pineapple", "Robot",
-        "Rocket", "Sandwich", "Shark", "Sneaker", "Spaceship", "Teapot",
-        "Tree", "Umbrella", "Volcano", "Whale"
-    ]
+    private static let roundLength = 180
 
-    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-    private let inkChoices = InkChoice.all
-    private let penWidths: [CGFloat] = [4, 7, 11]
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var archive = DoodleArchiveStore()
 
-    @State private var prompt = ContentView.prompts.randomElement() ?? "Robot"
-    @State private var scribble = Scribble.random()
+    private let timer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
+
+    @State private var screen: AppScreen = .home
+    @State private var archiveReturnScreen: AppScreen = .home
     @State private var drawing = PKDrawing()
+    @State private var scribble = ScribbleLibrary.random()
+    @State private var previousScribbleID: String?
     @State private var canvasSize: CGSize = .zero
     @State private var secondsRemaining = ContentView.roundLength
-    @State private var isFinished = false
-    @State private var selectedInk = InkChoice.all[0]
-    @State private var selectedWidth: CGFloat = 7
+    @State private var deadline: Date?
+    @State private var revealProgress: CGFloat = 0
+    @State private var resultImage: UIImage?
+    @State private var savedRecord: DoodleRecord?
+    @State private var selectedRecord: DoodleRecord?
     @State private var shareImage: ShareImage?
     @State private var notice: Notice?
+    @State private var showExitOptions = false
 
     var body: some View {
         ZStack {
-            Color(red: 0.95, green: 0.94, blue: 0.90)
-                .ignoresSafeArea()
+            NotebookBackground()
 
-            VStack(spacing: 0) {
-                header
-
-                promptStrip
-                    .padding(.horizontal, 18)
-                    .padding(.top, 10)
-
-                drawingBoard
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 14)
-
-                if isFinished {
-                    finishedControls
-                } else {
-                    drawingControls
-                }
+            switch screen {
+            case .home:
+                homeView
+                    .transition(.opacity)
+            case .revealing:
+                revealView
+                    .transition(.opacity)
+            case .drawing:
+                drawingView
+                    .transition(.opacity)
+            case .result:
+                resultView
+                    .transition(.opacity)
+            case .archive:
+                archiveView
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
             }
-            .padding(.bottom, 10)
         }
         .preferredColorScheme(.light)
-        .onReceive(timer) { _ in
-            guard !isFinished else { return }
-            if secondsRemaining > 1 {
-                secondsRemaining -= 1
-            } else {
-                secondsRemaining = 0
-                finishRound()
+        .onReceive(timer) { now in
+            updateTimer(now: now)
+        }
+        .onChange(of: scenePhase) { phase in
+            if phase == .active {
+                updateTimer(now: Date())
             }
         }
         .sheet(item: $shareImage) { item in
             ShareSheet(items: [item.image])
+        }
+        .fullScreenCover(item: $selectedRecord) { record in
+            ArchivePreviewView(
+                record: record,
+                image: archive.image(for: record),
+                onDelete: {
+                    archive.delete(record)
+                    if savedRecord?.id == record.id {
+                        savedRecord = nil
+                    }
+                    selectedRecord = nil
+                }
+            )
         }
         .alert(item: $notice) { notice in
             Alert(
@@ -74,89 +82,398 @@ struct ContentView: View {
                 dismissButton: .default(Text("OK"))
             )
         }
+        .confirmationDialog(
+            "Leave this scribble?",
+            isPresented: $showExitOptions,
+            titleVisibility: .visible
+        ) {
+            Button("Finish and save") { finishRound() }
+            Button("Discard scribble", role: .destructive) { discardRound() }
+            Button("Keep drawing", role: .cancel) {}
+        } message: {
+            Text("Finish this one now, or let it go?")
+        }
     }
 
-    private var header: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text("JUST")
-                    .font(.system(size: 12, weight: .black, design: .rounded))
-                    .foregroundStyle(Color(red: 0.88, green: 0.22, blue: 0.16))
-                Text("DOODLE")
-                    .font(.system(size: 25, weight: .black, design: .rounded))
-                    .foregroundStyle(Color(red: 0.12, green: 0.12, blue: 0.12))
+    private var homeView: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                if !archive.records.isEmpty {
+                    IconButton(systemName: "square.grid.2x2", label: "Open Doodle Book") {
+                        openArchive(returningTo: .home)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
+
+            Spacer()
+
+            VStack(spacing: 42) {
+                VStack(spacing: 5) {
+                    Text("Just Doodle.")
+                        .font(.doodleTitle(52))
+                        .foregroundStyle(Ink.black)
+
+                    HandUnderline()
+                        .stroke(Ink.black, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .frame(width: 220, height: 10)
+                }
+
+                StartDot(action: beginRound)
+
+                Text("Wanna scribble?")
+                    .font(.doodleBody(25))
+                    .foregroundStyle(Ink.black.opacity(0.86))
+            }
+
+            Spacer()
+            Spacer()
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private var revealView: some View {
+        VStack(spacing: 0) {
+            roundHeader(showClose: false)
+
+            ScribbleSurface(
+                scribble: scribble,
+                revealProgress: revealProgress,
+                drawing: $drawing,
+                isDrawingEnabled: false,
+                canvasSize: $canvasSize
+            )
+        }
+        .allowsHitTesting(false)
+    }
+
+    private var drawingView: some View {
+        VStack(spacing: 0) {
+            roundHeader(showClose: true)
+
+            ScribbleSurface(
+                scribble: scribble,
+                revealProgress: 1,
+                drawing: $drawing,
+                isDrawingEnabled: true,
+                canvasSize: $canvasSize
+            )
+        }
+    }
+
+    private var resultView: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(savedRecord == nil ? "Finished." : "Saved.")
+                    .font(.doodleTitle(28))
+                    .foregroundStyle(Ink.black)
+
+                Spacer()
+
+                Text("0:00")
+                    .font(.doodleBody(23))
+                    .monospacedDigit()
+                    .foregroundStyle(Ink.black)
+            }
+            .padding(.horizontal, 20)
+            .frame(height: 58)
+
+            if let resultImage {
+                Image(uiImage: resultImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.horizontal, 14)
+                    .accessibilityLabel("Your finished doodle")
+            } else {
+                ScribbleSurface(
+                    scribble: scribble,
+                    revealProgress: 1,
+                    drawing: $drawing,
+                    isDrawingEnabled: false,
+                    canvasSize: $canvasSize
+                )
+            }
+
+            HStack(spacing: 14) {
+                IconButton(systemName: "square.and.arrow.down", label: "Save to Photos", filled: false) {
+                    saveResultToPhotos()
+                }
+
+                IconButton(systemName: "square.and.arrow.up", label: "Share doodle", filled: false) {
+                    shareResult()
+                }
+
+                IconButton(systemName: "square.grid.2x2", label: "Open Doodle Book", filled: false) {
+                    openArchive(returningTo: .result)
+                }
+
+                Spacer()
+
+                Button(action: returnHome) {
+                    ZStack {
+                        Circle()
+                            .fill(Ink.black)
+                            .frame(width: 44, height: 44)
+                        Circle()
+                            .stroke(Ink.black.opacity(0.16), lineWidth: 2)
+                            .frame(width: 54, height: 54)
+                    }
+                    .frame(width: 56, height: 56)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Start another scribble")
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 8)
+        }
+    }
+
+    private var archiveView: some View {
+        VStack(spacing: 0) {
+            HStack {
+                IconButton(systemName: "chevron.left", label: "Back") {
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        screen = archiveReturnScreen
+                    }
+                }
+
+                Text("Doodle Book")
+                    .font(.doodleTitle(32))
+                    .foregroundStyle(Ink.black)
+
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 62)
+
+            if archive.records.isEmpty {
+                VStack(spacing: 22) {
+                    Spacer()
+                    Circle()
+                        .fill(Ink.black)
+                        .frame(width: 30, height: 30)
+                    Text("Nothing here yet.")
+                        .font(.doodleBody(24))
+                        .foregroundStyle(Ink.black.opacity(0.78))
+                    Spacer()
+                }
+            } else {
+                ScrollView {
+                    LazyVGrid(
+                        columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
+                        spacing: 16
+                    ) {
+                        ForEach(archive.records) { record in
+                            Button {
+                                selectedRecord = record
+                            } label: {
+                                VStack(alignment: .leading, spacing: 7) {
+                                    if let image = archive.image(for: record) {
+                                        Image(uiImage: image)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(maxWidth: .infinity)
+                                            .aspectRatio(0.78, contentMode: .fit)
+                                            .clipped()
+                                            .background(Color.white.opacity(0.5))
+                                    }
+
+                                    Text(record.createdAt.doodleDate)
+                                        .font(.doodleBody(16))
+                                        .foregroundStyle(Ink.black.opacity(0.72))
+                                        .lineLimit(1)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Doodle from \(record.createdAt.doodleDate)")
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 24)
+                }
+            }
+        }
+    }
+
+    private func roundHeader(showClose: Bool) -> some View {
+        HStack {
+            if showClose {
+                IconButton(systemName: "xmark", label: "End or discard session") {
+                    showExitOptions = true
+                }
+            } else {
+                Color.clear.frame(width: 44, height: 44)
             }
 
             Spacer()
 
-            Label(formattedTime, systemImage: "timer")
-                .font(.system(size: 18, weight: .bold, design: .monospaced))
-                .foregroundStyle(secondsRemaining <= 30 ? Color.red : Color.primary)
-                .padding(.horizontal, 12)
-                .frame(height: 40)
-                .background(Color.white.opacity(0.82))
-                .clipShape(RoundedRectangle(cornerRadius: 7))
-
-            Button(action: newRound) {
-                Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 17, weight: .bold))
-                    .frame(width: 40, height: 40)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(Color.primary)
-            .background(Color.white.opacity(0.82))
-            .clipShape(RoundedRectangle(cornerRadius: 7))
-            .accessibilityLabel("New round")
+            Text(formattedTime)
+                .font(.doodleBody(24))
+                .monospacedDigit()
+                .foregroundStyle(secondsRemaining <= 20 ? Ink.red : Ink.black)
+                .accessibilityLabel("\(secondsRemaining) seconds remaining")
         }
-        .padding(.horizontal, 18)
-        .padding(.top, 10)
+        .padding(.horizontal, 16)
+        .frame(height: 58)
     }
 
-    private var promptStrip: some View {
-        HStack(spacing: 10) {
-            Text(isFinished ? "YOUR DOODLE" : "DRAW A")
-                .font(.system(size: 12, weight: .black, design: .rounded))
-                .foregroundStyle(.secondary)
-
-            Text(prompt.uppercased())
-                .font(.system(size: 21, weight: .black, design: .rounded))
-                .foregroundStyle(Color(red: 0.88, green: 0.22, blue: 0.16))
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-
-            Spacer(minLength: 0)
-
-            if isFinished {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 22))
-                    .foregroundStyle(Color(red: 0.11, green: 0.55, blue: 0.34))
-                    .accessibilityLabel("Round finished")
-            }
-        }
-        .frame(height: 42)
+    private var formattedTime: String {
+        String(format: "%d:%02d", secondsRemaining / 60, secondsRemaining % 60)
     }
 
-    private var drawingBoard: some View {
-        ZStack {
-            Color.white
+    private func beginRound() {
+        let next = ScribbleLibrary.random(excluding: previousScribbleID)
+        previousScribbleID = next.id
+        scribble = next
+        drawing = PKDrawing()
+        secondsRemaining = ContentView.roundLength
+        deadline = nil
+        resultImage = nil
+        savedRecord = nil
+        revealProgress = 0
 
-            PaperLines()
-                .stroke(Color(red: 0.36, green: 0.66, blue: 0.78).opacity(0.12), lineWidth: 1)
-                .allowsHitTesting(false)
+        withAnimation(.easeOut(duration: 0.22)) {
+            screen = .revealing
+        }
 
-            ScribbleShape(points: scribble.points)
-                .stroke(
-                    Color(red: 0.22, green: 0.22, blue: 0.22),
-                    style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            withAnimation(.easeInOut(duration: 1.05)) {
+                revealProgress = 1
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.18) {
+            guard screen == .revealing else { return }
+            deadline = Date().addingTimeInterval(TimeInterval(ContentView.roundLength))
+            withAnimation(.easeOut(duration: 0.18)) {
+                screen = .drawing
+            }
+        }
+    }
+
+    private func updateTimer(now: Date) {
+        guard screen == .drawing, let deadline else { return }
+        let remaining = max(0, Int(ceil(deadline.timeIntervalSince(now))))
+        if remaining != secondsRemaining {
+            secondsRemaining = remaining
+        }
+        if remaining == 0 {
+            finishRound()
+        }
+    }
+
+    private func finishRound() {
+        guard screen == .drawing || screen == .revealing else { return }
+        deadline = nil
+        secondsRemaining = 0
+
+        let image = renderedDrawing()
+        resultImage = image
+        if let image {
+            if let record = archive.save(image: image, drawing: drawing) {
+                savedRecord = record
+            } else {
+                notice = Notice(
+                    title: "Couldn’t Save",
+                    message: "This doodle is still on screen, but it was not added to the Doodle Book."
                 )
-                .padding(24)
+            }
+        }
+
+        withAnimation(.easeInOut(duration: 0.24)) {
+            screen = .result
+        }
+    }
+
+    private func discardRound() {
+        deadline = nil
+        drawing = PKDrawing()
+        resultImage = nil
+        savedRecord = nil
+        returnHome()
+    }
+
+    private func returnHome() {
+        deadline = nil
+        withAnimation(.easeInOut(duration: 0.24)) {
+            screen = .home
+        }
+    }
+
+    private func openArchive(returningTo returnScreen: AppScreen) {
+        archiveReturnScreen = returnScreen
+        withAnimation(.easeInOut(duration: 0.24)) {
+            screen = .archive
+        }
+    }
+
+    private func shareResult() {
+        guard let image = resultImage ?? renderedDrawing() else { return }
+        shareImage = ShareImage(image: image)
+    }
+
+    private func saveResultToPhotos() {
+        guard let image = resultImage ?? renderedDrawing() else { return }
+        PhotoSaver.save(image) { outcome in
+            notice = outcome
+        }
+    }
+
+    private func renderedDrawing() -> UIImage? {
+        guard canvasSize.width > 0, canvasSize.height > 0 else { return nil }
+
+        let outputWidth: CGFloat = 1200
+        let headerHeight: CGFloat = 150
+        let outputCanvasHeight = outputWidth * (canvasSize.height / canvasSize.width)
+        let outputSize = CGSize(width: outputWidth, height: headerHeight + outputCanvasHeight)
+        let renderer = UIGraphicsImageRenderer(size: outputSize)
+
+        return renderer.image { rendererContext in
+            let context = rendererContext.cgContext
+            NotebookRenderer.drawBackground(in: context, size: outputSize, scale: outputWidth / canvasSize.width)
+
+            let titleFont = UIFont(name: "Noteworthy-Bold", size: 52)
+                ?? UIFont.systemFont(ofSize: 52, weight: .bold)
+            "Just Doodle.".draw(
+                at: CGPoint(x: 62, y: 36),
+                withAttributes: [
+                    .font: titleFont,
+                    .foregroundColor: UIColor(white: 0.08, alpha: 1)
+                ]
+            )
+
+            let canvasRect = CGRect(x: 0, y: headerHeight, width: outputWidth, height: outputCanvasHeight)
+
+            context.saveGState()
+            context.translateBy(x: 0, y: headerHeight)
+            ScribbleRenderer.draw(scribble, in: context, size: canvasRect.size, inset: 78)
+            context.restoreGState()
+
+            let sourceRect = CGRect(origin: .zero, size: canvasSize)
+            drawing.image(from: sourceRect, scale: 2).draw(in: canvasRect)
+        }
+    }
+}
+
+private struct ScribbleSurface: View {
+    let scribble: Scribble
+    let revealProgress: CGFloat
+    @Binding var drawing: PKDrawing
+    let isDrawingEnabled: Bool
+    @Binding var canvasSize: CGSize
+
+    var body: some View {
+        ZStack {
+            ScribbleInk(scribble: scribble, progress: revealProgress)
+                .padding(28)
                 .allowsHitTesting(false)
 
-            DrawingCanvas(
+            InkOnlyCanvas(
                 drawing: $drawing,
-                inkColor: selectedInk.uiColor,
-                lineWidth: selectedWidth,
-                isDrawingEnabled: !isFinished
+                isDrawingEnabled: isDrawingEnabled
             )
         }
         .background(
@@ -165,262 +482,72 @@ struct ContentView: View {
             }
         )
         .onPreferenceChange(CanvasSizePreferenceKey.self) { canvasSize = $0 }
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-        .overlay(
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(Color.black.opacity(0.12), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.11), radius: 8, y: 3)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityLabel("Drawing canvas for \(prompt)")
-    }
-
-    private var drawingControls: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 6) {
-                ForEach(inkChoices) { ink in
-                    Button {
-                        selectedInk = ink
-                    } label: {
-                        Circle()
-                            .fill(ink.color)
-                            .frame(width: 27, height: 27)
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.white, lineWidth: selectedInk.id == ink.id ? 3 : 0)
-                            )
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.black.opacity(selectedInk.id == ink.id ? 0.75 : 0.18), lineWidth: 1)
-                                    .padding(selectedInk.id == ink.id ? -3 : 0)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("\(ink.name) ink")
-                }
-            }
-
-            Divider()
-                .frame(height: 30)
-
-            Menu {
-                ForEach(penWidths, id: \.self) { width in
-                    Button {
-                        selectedWidth = width
-                    } label: {
-                        Label(
-                            width == 4 ? "Fine" : (width == 7 ? "Medium" : "Bold"),
-                            systemImage: selectedWidth == width ? "checkmark" : "circle"
-                        )
-                    }
-                }
-            } label: {
-                Image(systemName: "lineweight")
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: 38, height: 38)
-                    .background(Color.white.opacity(0.82))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-            }
-            .foregroundStyle(Color.primary)
-            .accessibilityLabel("Pen width")
-
-            Spacer(minLength: 0)
-
-            Button(action: finishRound) {
-                Label("Done", systemImage: "checkmark")
-                    .font(.system(size: 16, weight: .bold))
-                    .padding(.horizontal, 16)
-                    .frame(height: 44)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.white)
-            .background(Color(red: 0.88, green: 0.22, blue: 0.16))
-            .clipShape(RoundedRectangle(cornerRadius: 7))
-        }
-        .padding(.horizontal, 18)
-        .frame(height: 54)
-    }
-
-    private var finishedControls: some View {
-        HStack(spacing: 10) {
-            Button(action: saveToPhotos) {
-                Label("Save", systemImage: "square.and.arrow.down")
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 46)
-            }
-            .buttonStyle(ActionButtonStyle(filled: false))
-
-            Button(action: shareDrawing) {
-                Label("Share", systemImage: "square.and.arrow.up")
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 46)
-            }
-            .buttonStyle(ActionButtonStyle(filled: true))
-
-            Button(action: newRound) {
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 17, weight: .bold))
-                    .frame(width: 48, height: 46)
-            }
-            .buttonStyle(ActionButtonStyle(filled: false))
-            .accessibilityLabel("Start new round")
-        }
-        .padding(.horizontal, 18)
-        .frame(height: 54)
-    }
-
-    private var formattedTime: String {
-        String(format: "%d:%02d", secondsRemaining / 60, secondsRemaining % 60)
-    }
-
-    private func finishRound() {
-        isFinished = true
-    }
-
-    private func newRound() {
-        var nextPrompt = prompt
-        while nextPrompt == prompt && ContentView.prompts.count > 1 {
-            nextPrompt = ContentView.prompts.randomElement() ?? "Robot"
-        }
-
-        prompt = nextPrompt
-        scribble = .random()
-        drawing = PKDrawing()
-        secondsRemaining = ContentView.roundLength
-        isFinished = false
-    }
-
-    private func shareDrawing() {
-        guard let image = renderedDrawing() else { return }
-        shareImage = ShareImage(image: image)
-    }
-
-    private func saveToPhotos() {
-        guard let image = renderedDrawing() else { return }
-
-        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
-            guard status == .authorized || status == .limited else {
-                DispatchQueue.main.async {
-                    notice = Notice(
-                        title: "Photos Access Needed",
-                        message: "Allow Just Doodle to add photos in Settings, then try again."
-                    )
-                }
-                return
-            }
-
-            PHPhotoLibrary.shared().performChanges {
-                PHAssetChangeRequest.creationRequestForAsset(from: image)
-            } completionHandler: { success, error in
-                DispatchQueue.main.async {
-                    notice = Notice(
-                        title: success ? "Doodle Saved" : "Couldn’t Save",
-                        message: success
-                            ? "Your finished drawing is now in Photos."
-                            : (error?.localizedDescription ?? "Please try again.")
-                    )
-                }
-            }
-        }
-    }
-
-    private func renderedDrawing() -> UIImage? {
-        guard canvasSize.width > 0, canvasSize.height > 0 else { return nil }
-
-        let outputWidth: CGFloat = 1200
-        let headerHeight: CGFloat = 180
-        let outputCanvasHeight = outputWidth * (canvasSize.height / canvasSize.width)
-        let outputSize = CGSize(width: outputWidth, height: headerHeight + outputCanvasHeight)
-        let renderer = UIGraphicsImageRenderer(size: outputSize)
-
-        return renderer.image { context in
-            let cg = context.cgContext
-            UIColor(red: 0.95, green: 0.94, blue: 0.90, alpha: 1).setFill()
-            cg.fill(CGRect(origin: .zero, size: outputSize))
-
-            let title = "JUST DOODLE"
-            title.draw(
-                at: CGPoint(x: 54, y: 34),
-                withAttributes: [
-                    .font: UIFont.systemFont(ofSize: 30, weight: .black),
-                    .foregroundColor: UIColor(red: 0.88, green: 0.22, blue: 0.16, alpha: 1)
-                ]
-            )
-            prompt.uppercased().draw(
-                at: CGPoint(x: 54, y: 82),
-                withAttributes: [
-                    .font: UIFont.systemFont(ofSize: 58, weight: .black),
-                    .foregroundColor: UIColor(white: 0.10, alpha: 1)
-                ]
-            )
-
-            let outputCanvasRect = CGRect(x: 0, y: headerHeight, width: outputWidth, height: outputCanvasHeight)
-            UIColor.white.setFill()
-            cg.fill(outputCanvasRect)
-
-            cg.saveGState()
-            cg.translateBy(x: 0, y: headerHeight)
-            drawPaperLines(in: cg, size: outputCanvasRect.size)
-            drawScribble(in: cg, size: outputCanvasRect.size)
-            cg.restoreGState()
-
-            let sourceRect = CGRect(origin: .zero, size: canvasSize)
-            let drawingImage = drawing.image(from: sourceRect, scale: 2)
-            drawingImage.draw(in: outputCanvasRect)
-        }
-    }
-
-    private func drawPaperLines(in context: CGContext, size: CGSize) {
-        context.setStrokeColor(UIColor(red: 0.36, green: 0.66, blue: 0.78, alpha: 0.12).cgColor)
-        context.setLineWidth(2)
-        var y: CGFloat = 72
-        while y < size.height {
-            context.move(to: CGPoint(x: 0, y: y))
-            context.addLine(to: CGPoint(x: size.width, y: y))
-            y += 72
-        }
-        context.strokePath()
-    }
-
-    private func drawScribble(in context: CGContext, size: CGSize) {
-        let inset: CGFloat = 68
-        let rect = CGRect(x: inset, y: inset, width: size.width - inset * 2, height: size.height - inset * 2)
-        let points = scribble.points.map {
-            CGPoint(x: rect.minX + $0.x * rect.width, y: rect.minY + $0.y * rect.height)
-        }
-        guard let first = points.first else { return }
-
-        context.beginPath()
-        context.move(to: first)
-        for index in 1..<points.count {
-            let previous = points[index - 1]
-            let current = points[index]
-            let midpoint = CGPoint(x: (previous.x + current.x) / 2, y: (previous.y + current.y) / 2)
-            context.addQuadCurve(to: midpoint, control: previous)
-        }
-        if let previous = points.dropLast().last, let last = points.last {
-            context.addQuadCurve(to: last, control: previous)
-        }
-        context.setStrokeColor(UIColor(white: 0.22, alpha: 1).cgColor)
-        context.setLineWidth(14)
-        context.setLineCap(.round)
-        context.setLineJoin(.round)
-        context.strokePath()
+        .contentShape(Rectangle())
+        .accessibilityLabel("Scribble drawing canvas")
     }
 }
 
-private struct DrawingCanvas: UIViewRepresentable {
+private struct StartDot: View {
+    let action: () -> Void
+    @State private var breathing = false
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .stroke(Ink.black.opacity(0.14), lineWidth: 2)
+                    .frame(width: 86, height: 86)
+                    .scaleEffect(breathing ? 1.05 : 0.92)
+                    .opacity(breathing ? 0.35 : 0.8)
+
+                Circle()
+                    .fill(Ink.black)
+                    .frame(width: 58, height: 58)
+            }
+            .frame(width: 94, height: 94)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Begin a three minute scribble")
+        .onAppear {
+            breathing = false
+            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                breathing = true
+            }
+        }
+    }
+}
+
+private struct IconButton: View {
+    let systemName: String
+    let label: String
+    var filled = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(filled ? Color.white : Ink.black)
+                .frame(width: 44, height: 44)
+                .background(filled ? Ink.black : Color.white.opacity(0.55))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+}
+
+private struct InkOnlyCanvas: UIViewRepresentable {
     @Binding var drawing: PKDrawing
-    let inkColor: UIColor
-    let lineWidth: CGFloat
     let isDrawingEnabled: Bool
 
     func makeCoordinator() -> Coordinator {
         Coordinator(drawing: $drawing)
     }
 
-    func makeUIView(context: Context) -> PKCanvasView {
-        let canvas = PKCanvasView()
+    func makeUIView(context: Context) -> LockedInkCanvasView {
+        let canvas = LockedInkCanvasView()
         canvas.delegate = context.coordinator
         canvas.backgroundColor = .clear
         canvas.isOpaque = false
@@ -428,15 +555,17 @@ private struct DrawingCanvas: UIViewRepresentable {
         canvas.alwaysBounceVertical = false
         canvas.alwaysBounceHorizontal = false
         canvas.isScrollEnabled = false
-        canvas.tool = PKInkingTool(.pen, color: inkColor, width: lineWidth)
+        canvas.minimumZoomScale = 1
+        canvas.maximumZoomScale = 1
+        canvas.tool = PKInkingTool(.pen, color: .black, width: 5.5)
         return canvas
     }
 
-    func updateUIView(_ canvas: PKCanvasView, context: Context) {
+    func updateUIView(_ canvas: LockedInkCanvasView, context: Context) {
         if canvas.drawing.dataRepresentation() != drawing.dataRepresentation() {
             canvas.drawing = drawing
         }
-        canvas.tool = PKInkingTool(.pen, color: inkColor, width: lineWidth)
+        canvas.tool = PKInkingTool(.pen, color: .black, width: 5.5)
         canvas.isUserInteractionEnabled = isDrawingEnabled
     }
 
@@ -453,89 +582,465 @@ private struct DrawingCanvas: UIViewRepresentable {
     }
 }
 
+private final class LockedInkCanvasView: PKCanvasView {
+    override var undoManager: UndoManager? { nil }
+}
+
+private struct ScribbleInk: View {
+    let scribble: Scribble
+    let progress: CGFloat
+
+    var body: some View {
+        GeometryReader { proxy in
+            let first = mapped(scribble.points.first ?? .zero, in: proxy.size)
+            let last = mapped(scribble.points.last ?? .zero, in: proxy.size)
+
+            ZStack(alignment: .topLeading) {
+                ScribbleShape(points: scribble.points)
+                    .trim(from: 0, to: max(0.001, progress))
+                    .stroke(
+                        Ink.scribble,
+                        style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round)
+                    )
+
+                Circle()
+                    .fill(Ink.black)
+                    .frame(width: 15, height: 15)
+                    .position(first)
+                    .opacity(progress > 0 ? 1 : 0)
+
+                Circle()
+                    .fill(NotebookColors.paper)
+                    .overlay(Circle().stroke(Ink.black, lineWidth: 4))
+                    .frame(width: 17, height: 17)
+                    .position(last)
+                    .opacity(progress > 0.96 ? 1 : 0)
+            }
+        }
+    }
+
+    private func mapped(_ point: CGPoint, in size: CGSize) -> CGPoint {
+        CGPoint(x: point.x * size.width, y: point.y * size.height)
+    }
+}
+
 private struct ScribbleShape: Shape {
     let points: [CGPoint]
 
     func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let mapped = points.map {
+        let mappedPoints = points.map {
             CGPoint(x: rect.minX + $0.x * rect.width, y: rect.minY + $0.y * rect.height)
         }
-        guard let first = mapped.first else { return path }
+        return ScribblePath.path(points: mappedPoints)
+    }
+}
+
+private enum ScribblePath {
+    static func path(points: [CGPoint]) -> Path {
+        var path = Path()
+        guard let first = points.first else { return path }
 
         path.move(to: first)
-        for index in 1..<mapped.count {
-            let previous = mapped[index - 1]
-            let current = mapped[index]
+        for index in 1..<points.count {
+            let previous = points[index - 1]
+            let current = points[index]
             let midpoint = CGPoint(x: (previous.x + current.x) / 2, y: (previous.y + current.y) / 2)
             path.addQuadCurve(to: midpoint, control: previous)
         }
-        if let previous = mapped.dropLast().last, let last = mapped.last {
+        if let previous = points.dropLast().last, let last = points.last {
             path.addQuadCurve(to: last, control: previous)
         }
         return path
     }
 }
 
+private struct Scribble: Equatable {
+    let id: String
+    let points: [CGPoint]
+}
+
+private enum ScribbleLibrary {
+    private static let bases: [[CGPoint]] = [
+        points([0.12, 0.64, 0.22, 0.22, 0.43, 0.18, 0.36, 0.52, 0.57, 0.78, 0.70, 0.48, 0.55, 0.30, 0.83, 0.36, 0.88, 0.68]),
+        points([0.10, 0.28, 0.32, 0.18, 0.26, 0.58, 0.48, 0.76, 0.62, 0.40, 0.42, 0.22, 0.70, 0.17, 0.88, 0.50]),
+        points([0.14, 0.74, 0.20, 0.32, 0.44, 0.26, 0.54, 0.66, 0.34, 0.78, 0.30, 0.48, 0.64, 0.34, 0.84, 0.62]),
+        points([0.10, 0.48, 0.24, 0.16, 0.52, 0.20, 0.40, 0.55, 0.22, 0.76, 0.58, 0.79, 0.76, 0.52, 0.60, 0.32, 0.88, 0.25]),
+        points([0.13, 0.23, 0.40, 0.18, 0.46, 0.46, 0.22, 0.58, 0.18, 0.82, 0.55, 0.72, 0.72, 0.40, 0.56, 0.22, 0.86, 0.30]),
+        points([0.09, 0.68, 0.28, 0.74, 0.34, 0.40, 0.20, 0.20, 0.58, 0.22, 0.74, 0.48, 0.52, 0.70, 0.82, 0.78]),
+        points([0.14, 0.42, 0.31, 0.18, 0.55, 0.28, 0.72, 0.18, 0.82, 0.44, 0.61, 0.58, 0.44, 0.42, 0.30, 0.72, 0.87, 0.70]),
+        points([0.10, 0.18, 0.24, 0.52, 0.48, 0.65, 0.56, 0.26, 0.78, 0.22, 0.88, 0.54, 0.72, 0.78, 0.40, 0.70, 0.16, 0.82]),
+        points([0.12, 0.55, 0.30, 0.26, 0.52, 0.18, 0.68, 0.40, 0.50, 0.60, 0.28, 0.47, 0.38, 0.78, 0.82, 0.71]),
+        points([0.11, 0.32, 0.34, 0.18, 0.60, 0.25, 0.84, 0.18, 0.76, 0.54, 0.54, 0.72, 0.38, 0.44, 0.18, 0.76, 0.88, 0.68]),
+        points([0.12, 0.80, 0.20, 0.37, 0.42, 0.18, 0.65, 0.30, 0.76, 0.62, 0.56, 0.78, 0.36, 0.56, 0.53, 0.37, 0.88, 0.46]),
+        points([0.09, 0.47, 0.22, 0.22, 0.44, 0.33, 0.61, 0.16, 0.84, 0.28, 0.73, 0.57, 0.48, 0.47, 0.32, 0.72, 0.86, 0.78]),
+        points([0.13, 0.67, 0.28, 0.20, 0.54, 0.18, 0.43, 0.52, 0.64, 0.76, 0.81, 0.51, 0.63, 0.33, 0.28, 0.41, 0.18, 0.80]),
+        points([0.11, 0.24, 0.29, 0.72, 0.47, 0.47, 0.65, 0.76, 0.86, 0.54, 0.69, 0.22, 0.43, 0.20, 0.22, 0.42, 0.54, 0.61, 0.88, 0.31]),
+        points([0.10, 0.62, 0.23, 0.18, 0.50, 0.32, 0.73, 0.17, 0.88, 0.42, 0.70, 0.72, 0.45, 0.62, 0.28, 0.77, 0.16, 0.48, 0.54, 0.43]),
+        points([0.14, 0.30, 0.34, 0.16, 0.57, 0.34, 0.80, 0.22, 0.86, 0.58, 0.62, 0.78, 0.42, 0.56, 0.20, 0.73, 0.27, 0.38, 0.74, 0.45]),
+        points([0.09, 0.72, 0.30, 0.75, 0.45, 0.46, 0.24, 0.25, 0.58, 0.18, 0.82, 0.34, 0.67, 0.62, 0.43, 0.74, 0.51, 0.31, 0.88, 0.68]),
+        points([0.13, 0.50, 0.25, 0.19, 0.48, 0.22, 0.69, 0.44, 0.83, 0.24, 0.89, 0.61, 0.66, 0.79, 0.47, 0.58, 0.25, 0.78, 0.17, 0.42])
+    ]
+
+    static func random(excluding excludedID: String? = nil) -> Scribble {
+        var baseIndex = Int.random(in: bases.indices)
+        var variant = Int.random(in: 0..<4)
+        var id = "\(baseIndex)-\(variant)"
+
+        if id == excludedID {
+            baseIndex = (baseIndex + 1) % bases.count
+            variant = (variant + 1) % 4
+            id = "\(baseIndex)-\(variant)"
+        }
+
+        let flipX = variant == 1 || variant == 3
+        let flipY = variant == 2 || variant == 3
+        let transformed = bases[baseIndex].map { point in
+            CGPoint(
+                x: flipX ? 1 - point.x : point.x,
+                y: flipY ? 1 - point.y : point.y
+            )
+        }
+
+        return Scribble(id: id, points: transformed)
+    }
+
+    private static func points(_ values: [CGFloat]) -> [CGPoint] {
+        stride(from: 0, to: values.count, by: 2).map {
+            CGPoint(x: values[$0], y: values[$0 + 1])
+        }
+    }
+}
+
+private enum ScribbleRenderer {
+    static func draw(_ scribble: Scribble, in context: CGContext, size: CGSize, inset: CGFloat) {
+        let rect = CGRect(
+            x: inset,
+            y: inset,
+            width: max(1, size.width - inset * 2),
+            height: max(1, size.height - inset * 2)
+        )
+        let points = scribble.points.map {
+            CGPoint(x: rect.minX + $0.x * rect.width, y: rect.minY + $0.y * rect.height)
+        }
+        guard let first = points.first else { return }
+
+        context.beginPath()
+        context.move(to: first)
+        for index in 1..<points.count {
+            let previous = points[index - 1]
+            let current = points[index]
+            let midpoint = CGPoint(x: (previous.x + current.x) / 2, y: (previous.y + current.y) / 2)
+            context.addQuadCurve(to: midpoint, control: previous)
+        }
+        if let previous = points.dropLast().last, let last = points.last {
+            context.addQuadCurve(to: last, control: previous)
+        }
+        context.setStrokeColor(UIColor(white: 0.34, alpha: 1).cgColor)
+        context.setLineWidth(13)
+        context.setLineCap(.round)
+        context.setLineJoin(.round)
+        context.strokePath()
+
+        context.setFillColor(UIColor.black.cgColor)
+        context.fillEllipse(in: CGRect(x: first.x - 17, y: first.y - 17, width: 34, height: 34))
+
+        if let last = points.last {
+            context.setFillColor(NotebookColors.uiPaper.cgColor)
+            context.fillEllipse(in: CGRect(x: last.x - 18, y: last.y - 18, width: 36, height: 36))
+            context.setStrokeColor(UIColor.black.cgColor)
+            context.setLineWidth(9)
+            context.strokeEllipse(in: CGRect(x: last.x - 18, y: last.y - 18, width: 36, height: 36))
+        }
+    }
+}
+
+private struct NotebookBackground: View {
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .topLeading) {
+                NotebookColors.paper
+
+                PaperLines(spacing: 32)
+                    .stroke(NotebookColors.rule, lineWidth: 1)
+
+                Rectangle()
+                    .fill(NotebookColors.margin)
+                    .frame(width: 1.5)
+                    .offset(x: min(42, proxy.size.width * 0.12))
+            }
+        }
+        .ignoresSafeArea()
+    }
+}
+
 private struct PaperLines: Shape {
+    let spacing: CGFloat
+
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        var y = rect.minY + 24
+        var y = rect.minY + spacing
         while y < rect.maxY {
             path.move(to: CGPoint(x: rect.minX, y: y))
             path.addLine(to: CGPoint(x: rect.maxX, y: y))
-            y += 24
+            y += spacing
         }
         return path
     }
 }
 
-private struct Scribble {
-    let points: [CGPoint]
-
-    static func random() -> Scribble {
-        let count = Int.random(in: 7...11)
-        var points: [CGPoint] = []
-        var previous = CGPoint(x: CGFloat.random(in: 0.15...0.85), y: CGFloat.random(in: 0.15...0.85))
-        points.append(previous)
-
-        for _ in 1..<count {
-            var candidate = CGPoint.zero
-            repeat {
-                candidate = CGPoint(x: CGFloat.random(in: 0.08...0.92), y: CGFloat.random(in: 0.08...0.92))
-            } while hypot(candidate.x - previous.x, candidate.y - previous.y) < 0.22
-            points.append(candidate)
-            previous = candidate
-        }
-
-        return Scribble(points: points)
+private struct HandUnderline: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + 2, y: rect.midY + 1))
+        path.addCurve(
+            to: CGPoint(x: rect.maxX - 2, y: rect.midY),
+            control1: CGPoint(x: rect.width * 0.28, y: rect.maxY),
+            control2: CGPoint(x: rect.width * 0.67, y: rect.minY)
+        )
+        return path
     }
 }
 
-private struct InkChoice: Identifiable {
-    let id: String
-    let name: String
-    let color: Color
-    let uiColor: UIColor
+private enum NotebookRenderer {
+    static func drawBackground(in context: CGContext, size: CGSize, scale: CGFloat) {
+        context.setFillColor(NotebookColors.uiPaper.cgColor)
+        context.fill(CGRect(origin: .zero, size: size))
 
-    static let all = [
-        InkChoice(id: "charcoal", name: "Charcoal", color: Color(red: 0.09, green: 0.09, blue: 0.10), uiColor: UIColor(red: 0.09, green: 0.09, blue: 0.10, alpha: 1)),
-        InkChoice(id: "red", name: "Red", color: Color(red: 0.88, green: 0.22, blue: 0.16), uiColor: UIColor(red: 0.88, green: 0.22, blue: 0.16, alpha: 1)),
-        InkChoice(id: "blue", name: "Blue", color: Color(red: 0.10, green: 0.38, blue: 0.75), uiColor: UIColor(red: 0.10, green: 0.38, blue: 0.75, alpha: 1)),
-        InkChoice(id: "green", name: "Green", color: Color(red: 0.08, green: 0.52, blue: 0.31), uiColor: UIColor(red: 0.08, green: 0.52, blue: 0.31, alpha: 1))
-    ]
+        context.setStrokeColor(UIColor(red: 0.58, green: 0.69, blue: 0.75, alpha: 0.24).cgColor)
+        context.setLineWidth(2)
+        var y: CGFloat = 52
+        while y < size.height {
+            context.move(to: CGPoint(x: 0, y: y))
+            context.addLine(to: CGPoint(x: size.width, y: y))
+            y += 32 * scale
+        }
+        context.strokePath()
+
+        context.setStrokeColor(UIColor(red: 0.82, green: 0.30, blue: 0.29, alpha: 0.56).cgColor)
+        context.setLineWidth(3)
+        let marginX = min(82, size.width * 0.12)
+        context.move(to: CGPoint(x: marginX, y: 0))
+        context.addLine(to: CGPoint(x: marginX, y: size.height))
+        context.strokePath()
+    }
 }
 
-private struct ActionButtonStyle: ButtonStyle {
-    let filled: Bool
+private enum NotebookColors {
+    static let paper = Color(red: 0.985, green: 0.975, blue: 0.92)
+    static let rule = Color(red: 0.42, green: 0.57, blue: 0.66).opacity(0.20)
+    static let margin = Color(red: 0.82, green: 0.30, blue: 0.29).opacity(0.58)
+    static let uiPaper = UIColor(red: 0.985, green: 0.975, blue: 0.92, alpha: 1)
+}
 
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 16, weight: .bold))
-            .foregroundStyle(filled ? Color.white : Color.primary)
-            .background(filled ? Color(red: 0.88, green: 0.22, blue: 0.16) : Color.white.opacity(0.82))
-            .clipShape(RoundedRectangle(cornerRadius: 7))
-            .opacity(configuration.isPressed ? 0.72 : 1)
+private enum Ink {
+    static let black = Color(red: 0.07, green: 0.07, blue: 0.065)
+    static let scribble = Color(red: 0.34, green: 0.34, blue: 0.33)
+    static let red = Color(red: 0.78, green: 0.16, blue: 0.14)
+}
+
+private extension Font {
+    static func doodleTitle(_ size: CGFloat) -> Font {
+        .custom("Noteworthy-Bold", size: size, relativeTo: .title)
+    }
+
+    static func doodleBody(_ size: CGFloat) -> Font {
+        .custom("Noteworthy", size: size, relativeTo: .body)
+    }
+}
+
+private enum AppScreen {
+    case home
+    case revealing
+    case drawing
+    case result
+    case archive
+}
+
+private struct DoodleRecord: Codable, Identifiable, Hashable {
+    let id: UUID
+    let createdAt: Date
+    let imageFilename: String
+    let drawingFilename: String
+}
+
+@MainActor
+private final class DoodleArchiveStore: ObservableObject {
+    @Published private(set) var records: [DoodleRecord] = []
+
+    private let fileManager = FileManager.default
+    private let decoder = JSONDecoder()
+    private let encoder = JSONEncoder()
+    private let directoryURL: URL
+    private let indexURL: URL
+
+    init() {
+        let applicationSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        directoryURL = applicationSupport.appendingPathComponent("JustDoodle", isDirectory: true)
+        indexURL = directoryURL.appendingPathComponent("doodles.json")
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        load()
+    }
+
+    func save(image: UIImage, drawing: PKDrawing) -> DoodleRecord? {
+        do {
+            try prepareDirectory()
+            let id = UUID()
+            let imageFilename = "\(id.uuidString).png"
+            let drawingFilename = "\(id.uuidString).drawing"
+            guard let imageData = image.pngData() else { return nil }
+
+            try imageData.write(to: directoryURL.appendingPathComponent(imageFilename), options: .atomic)
+            try drawing.dataRepresentation().write(
+                to: directoryURL.appendingPathComponent(drawingFilename),
+                options: .atomic
+            )
+
+            let record = DoodleRecord(
+                id: id,
+                createdAt: Date(),
+                imageFilename: imageFilename,
+                drawingFilename: drawingFilename
+            )
+            records.insert(record, at: 0)
+            try persist()
+            return record
+        } catch {
+            return nil
+        }
+    }
+
+    func image(for record: DoodleRecord) -> UIImage? {
+        UIImage(contentsOfFile: directoryURL.appendingPathComponent(record.imageFilename).path)
+    }
+
+    func delete(_ record: DoodleRecord) {
+        records.removeAll { $0.id == record.id }
+        try? fileManager.removeItem(at: directoryURL.appendingPathComponent(record.imageFilename))
+        try? fileManager.removeItem(at: directoryURL.appendingPathComponent(record.drawingFilename))
+        try? persist()
+    }
+
+    private func load() {
+        do {
+            try prepareDirectory()
+            guard fileManager.fileExists(atPath: indexURL.path) else { return }
+            records = try decoder.decode([DoodleRecord].self, from: Data(contentsOf: indexURL))
+                .sorted { $0.createdAt > $1.createdAt }
+        } catch {
+            records = []
+        }
+    }
+
+    private func persist() throws {
+        try encoder.encode(records).write(to: indexURL, options: .atomic)
+    }
+
+    private func prepareDirectory() throws {
+        try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+    }
+}
+
+private struct ArchivePreviewView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let record: DoodleRecord
+    let image: UIImage?
+    let onDelete: () -> Void
+
+    @State private var shareImage: ShareImage?
+    @State private var notice: Notice?
+    @State private var confirmDelete = false
+
+    var body: some View {
+        ZStack {
+            NotebookBackground()
+
+            VStack(spacing: 0) {
+                HStack {
+                    IconButton(systemName: "xmark", label: "Close") { dismiss() }
+                    Spacer()
+                    Text(record.createdAt.doodleDate)
+                        .font(.doodleBody(20))
+                        .foregroundStyle(Ink.black)
+                    Spacer()
+                    IconButton(systemName: "trash", label: "Delete doodle") {
+                        confirmDelete = true
+                    }
+                }
+                .padding(.horizontal, 16)
+                .frame(height: 60)
+
+                if let image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.horizontal, 14)
+                }
+
+                HStack(spacing: 16) {
+                    Spacer()
+                    IconButton(systemName: "square.and.arrow.down", label: "Save to Photos") {
+                        guard let image else { return }
+                        PhotoSaver.save(image) { notice = $0 }
+                    }
+                    IconButton(systemName: "square.and.arrow.up", label: "Share doodle") {
+                        guard let image else { return }
+                        shareImage = ShareImage(image: image)
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 10)
+            }
+        }
+        .preferredColorScheme(.light)
+        .sheet(item: $shareImage) { item in
+            ShareSheet(items: [item.image])
+        }
+        .alert(item: $notice) { notice in
+            Alert(
+                title: Text(notice.title),
+                message: Text(notice.message),
+                dismissButton: .default(Text("OK"))
+            )
+        }
+        .confirmationDialog("Delete this doodle?", isPresented: $confirmDelete) {
+            Button("Delete", role: .destructive) { onDelete() }
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+}
+
+private enum PhotoSaver {
+    static func save(_ image: UIImage, completion: @escaping (Notice) -> Void) {
+        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+            guard status == .authorized || status == .limited else {
+                DispatchQueue.main.async {
+                    completion(
+                        Notice(
+                            title: "Photos Access Needed",
+                            message: "Allow Just Doodle to add photos in Settings, then try again."
+                        )
+                    )
+                }
+                return
+            }
+
+            PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest.creationRequestForAsset(from: image)
+            } completionHandler: { success, error in
+                DispatchQueue.main.async {
+                    completion(
+                        Notice(
+                            title: success ? "Doodle Saved" : "Couldn’t Save",
+                            message: success
+                                ? "Your drawing is now in Photos."
+                                : (error?.localizedDescription ?? "Please try again.")
+                        )
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -566,6 +1071,19 @@ private struct CanvasSizePreferenceKey: PreferenceKey {
     static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
         value = nextValue()
     }
+}
+
+private extension Date {
+    var doodleDate: String {
+        Self.doodleDateFormatter.string(from: self)
+    }
+
+    static let doodleDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }()
 }
 
 struct ContentView_Previews: PreviewProvider {

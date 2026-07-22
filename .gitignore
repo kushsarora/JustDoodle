@@ -3,6 +3,7 @@ DerivedData/
 build/
 *.xcuserstate
 xcuserdata/
+*.xcodeproj/project.xcworkspace/contents.xcworkspacedata
 *.moved-aside
 *.ipa
 *.dSYM.zip
