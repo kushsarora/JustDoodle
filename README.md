@@ -15,4 +15,6 @@ Just Doodle is a SwiftUI iOS app for turning one imperfect line into something u
 
 The opening uses Apple's built-in Noteworthy face as a temporary handwritten font. A custom Just Doodle typeface can replace it later without changing the screen flow.
 
+The app icon carries the same ruled-paper, red-margin, handwritten signature used throughout the game.
+
 Open `JustDoodle.xcodeproj` in Xcode and run the `JustDoodle` target on an iPhone simulator or device.
