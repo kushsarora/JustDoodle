@@ -5,7 +5,7 @@ import SwiftUI
 import UIKit
 
 struct ContentView: View {
-    private static let roundLength = 180
+    private static let classicRoundLength = 180
 
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var archive = DoodleArchiveStore()
@@ -18,7 +18,7 @@ struct ContentView: View {
     @State private var scribble = ScribbleLibrary.random()
     @State private var previousScribbleID: String?
     @State private var canvasSize: CGSize = .zero
-    @State private var secondsRemaining = ContentView.roundLength
+    @State private var secondsRemaining = ContentView.classicRoundLength
     @State private var deadline: Date?
     @State private var revealProgress: CGFloat = 0
     @State private var resultImage: UIImage?
@@ -29,6 +29,10 @@ struct ContentView: View {
     @State private var showExitOptions = false
     @State private var showSplash = true
     @State private var currentIdea: String?
+    @State private var activeSession = DoodleSession.classic
+    @State private var selectedInk = DoodleInk.black
+    @State private var customDuration = ChallengeDuration.threeMinutes
+    @State private var customPalette = InkPalette.black
 
     var body: some View {
         ZStack {
@@ -50,6 +54,9 @@ struct ContentView: View {
             case .archive:
                 archiveView
                     .transition(.move(edge: .trailing).combined(with: .opacity))
+            case .challenges:
+                challengesView
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
             if showSplash {
@@ -75,7 +82,7 @@ struct ContentView: View {
             }
         }
         .sheet(item: $shareImage) { item in
-            ShareSheet(items: [item.image])
+            ShareSheet(items: [item.image, item.caption])
         }
         .fullScreenCover(item: $selectedRecord) { record in
             ArchivePreviewView(
@@ -136,11 +143,30 @@ struct ContentView: View {
                         .frame(width: 220, height: 10)
                 }
 
-                StartDot(action: beginRound)
+                StartDot(action: beginClassicRound)
 
                 Text("Wanna scribble?")
                     .font(.doodleBody(25))
                     .foregroundStyle(Ink.black.opacity(0.86))
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.24)) {
+                        screen = .challenges
+                    }
+                } label: {
+                    Label("Try a challenge", systemImage: "sparkles")
+                        .font(.doodleTitle(19))
+                        .foregroundStyle(Ink.black)
+                        .padding(.horizontal, 16)
+                        .frame(height: 44)
+                        .background(Color.white.opacity(0.58))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Ink.black.opacity(0.72), lineWidth: 1.5)
+                        )
+                }
+                .buttonStyle(.plain)
             }
 
             Spacer()
@@ -153,11 +179,16 @@ struct ContentView: View {
         VStack(spacing: 0) {
             roundHeader(showClose: false)
 
+            if activeSession.isChallenge {
+                sessionBanner
+            }
+
             ScribbleSurface(
                 scribble: scribble,
                 revealProgress: revealProgress,
                 drawing: $drawing,
                 isDrawingEnabled: false,
+                ink: selectedInk,
                 canvasSize: $canvasSize
             )
         }
@@ -168,18 +199,38 @@ struct ContentView: View {
         VStack(spacing: 0) {
             roundHeader(showClose: true)
 
+            if activeSession.isChallenge {
+                sessionBanner
+            }
+
             ZStack(alignment: .bottomTrailing) {
                 ScribbleSurface(
                     scribble: scribble,
                     revealProgress: 1,
                     drawing: $drawing,
                     isDrawingEnabled: true,
+                    ink: selectedInk,
                     canvasSize: $canvasSize
                 )
 
                 IdeaBox(idea: currentIdea, action: refreshIdea)
                     .padding(.trailing, 18)
                     .padding(.bottom, 18)
+
+                if activeSession.inks.count > 1 {
+                    VStack {
+                        Spacer()
+                        HStack {
+                            InkPalettePicker(
+                                inks: activeSession.inks,
+                                selection: $selectedInk
+                            )
+                            Spacer()
+                        }
+                    }
+                    .padding(.leading, 18)
+                    .padding(.bottom, 18)
+                }
             }
         }
     }
@@ -187,9 +238,18 @@ struct ContentView: View {
     private var resultView: some View {
         VStack(spacing: 0) {
             HStack {
-                Text(savedRecord == nil ? "Finished." : "Saved.")
-                    .font(.doodleTitle(28))
-                    .foregroundStyle(Ink.black)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(savedRecord == nil ? "Finished." : "Saved.")
+                        .font(.doodleTitle(27))
+                        .foregroundStyle(Ink.black)
+
+                    if activeSession.isChallenge {
+                        Text(activeSession.title)
+                            .font(.doodleBody(14))
+                            .foregroundStyle(Ink.blue)
+                            .lineLimit(1)
+                    }
+                }
 
                 Spacer()
 
@@ -199,7 +259,7 @@ struct ContentView: View {
                     .foregroundStyle(Ink.black)
             }
             .padding(.horizontal, 20)
-            .frame(height: 58)
+            .frame(height: 62)
 
             if let resultImage {
                 Image(uiImage: resultImage)
@@ -214,6 +274,7 @@ struct ContentView: View {
                     revealProgress: 1,
                     drawing: $drawing,
                     isDrawingEnabled: false,
+                    ink: selectedInk,
                     canvasSize: $canvasSize
                 )
             }
@@ -302,10 +363,17 @@ struct ContentView: View {
                                             .background(Color.white.opacity(0.5))
                                     }
 
-                                    Text(record.createdAt.doodleDate)
-                                        .font(.doodleBody(16))
-                                        .foregroundStyle(Ink.black.opacity(0.72))
-                                        .lineLimit(1)
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(record.sessionTitle ?? "Classic")
+                                            .font(.doodleTitle(16))
+                                            .foregroundStyle(Ink.black)
+                                            .lineLimit(1)
+
+                                        Text(record.createdAt.doodleDate)
+                                            .font(.doodleBody(14))
+                                            .foregroundStyle(Ink.black.opacity(0.66))
+                                            .lineLimit(1)
+                                    }
                                 }
                             }
                             .buttonStyle(.plain)
@@ -317,6 +385,70 @@ struct ContentView: View {
                 }
             }
         }
+    }
+
+    private var challengesView: some View {
+        VStack(spacing: 0) {
+            HStack {
+                IconButton(systemName: "chevron.left", label: "Back to home") {
+                    withAnimation(.easeInOut(duration: 0.24)) {
+                        screen = .home
+                    }
+                }
+
+                Text("Doodle Packs")
+                    .font(.doodleTitle(31))
+                    .foregroundStyle(Ink.black)
+
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 62)
+
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    ForEach(ChallengeLibrary.packs) { pack in
+                        ChallengePackButton(pack: pack) {
+                            beginRound(pack.session)
+                        }
+                    }
+
+                    CustomChallengeBuilder(
+                        duration: $customDuration,
+                        palette: $customPalette,
+                        start: beginCustomChallenge
+                    )
+                    .padding(.top, 10)
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 28)
+            }
+        }
+    }
+
+    private var sessionBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: activeSession.symbol)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Ink.blue)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(activeSession.title)
+                    .font(.doodleTitle(17))
+                    .foregroundStyle(Ink.black)
+                Text(activeSession.instruction)
+                    .font(.doodleBody(15))
+                    .foregroundStyle(Ink.black.opacity(0.72))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 18)
+        .frame(height: 48)
+        .background(Color.white.opacity(0.52))
+        .accessibilityElement(children: .combine)
     }
 
     private func roundHeader(showClose: Bool) -> some View {
@@ -345,12 +477,31 @@ struct ContentView: View {
         String(format: "%d:%02d", secondsRemaining / 60, secondsRemaining % 60)
     }
 
-    private func beginRound() {
+    private func beginClassicRound() {
+        beginRound(.classic)
+    }
+
+    private func beginCustomChallenge() {
+        beginRound(
+            DoodleSession(
+                title: "My Challenge",
+                instruction: "Make anything from the scribble.",
+                symbol: "slider.horizontal.3",
+                duration: customDuration.seconds,
+                inks: customPalette.inks,
+                isChallenge: true
+            )
+        )
+    }
+
+    private func beginRound(_ session: DoodleSession) {
         let next = ScribbleLibrary.random(excluding: previousScribbleID)
         previousScribbleID = next.id
         scribble = next
+        activeSession = session
+        selectedInk = session.inks.first ?? .black
         drawing = PKDrawing()
-        secondsRemaining = ContentView.roundLength
+        secondsRemaining = session.duration
         deadline = nil
         resultImage = nil
         savedRecord = nil
@@ -369,7 +520,7 @@ struct ContentView: View {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.18) {
             guard screen == .revealing else { return }
-            deadline = Date().addingTimeInterval(TimeInterval(ContentView.roundLength))
+            deadline = Date().addingTimeInterval(TimeInterval(session.duration))
             withAnimation(.easeOut(duration: 0.18)) {
                 screen = .drawing
             }
@@ -383,19 +534,28 @@ struct ContentView: View {
             secondsRemaining = remaining
         }
         if remaining == 0 {
-            finishRound()
+            finishRound(timedOut: true)
         }
     }
 
-    private func finishRound() {
+    private func finishRound(timedOut: Bool = false) {
         guard screen == .drawing || screen == .revealing else { return }
         deadline = nil
         secondsRemaining = 0
 
+        if timedOut {
+            Haptics.timeUp()
+        }
+
         let image = renderedDrawing()
         resultImage = image
         if let image {
-            if let record = archive.save(image: image, drawing: drawing) {
+            if let record = archive.save(
+                image: image,
+                drawing: drawing,
+                sessionTitle: activeSession.archiveTitle,
+                prompt: currentIdea
+            ) {
                 savedRecord = record
             } else {
                 notice = Notice(
@@ -438,7 +598,7 @@ struct ContentView: View {
 
     private func shareResult() {
         guard let image = resultImage ?? renderedDrawing() else { return }
-        shareImage = ShareImage(image: image)
+        shareImage = ShareImage(image: image, caption: shareCaption)
     }
 
     private func saveResultToPhotos() {
@@ -446,6 +606,12 @@ struct ContentView: View {
         PhotoSaver.save(image) { outcome in
             notice = outcome
         }
+    }
+
+    private var shareCaption: String {
+        let session = activeSession.isChallenge ? "the \(activeSession.title) challenge" : "one random scribble"
+        let idea = currentIdea.map { " My idea was \($0)." } ?? ""
+        return "I turned \(session) into this with Just Doodle.\(idea) #JustDoodle"
     }
 
     private func renderedDrawing() -> UIImage? {
@@ -470,6 +636,20 @@ struct ContentView: View {
                     .foregroundColor: UIColor(white: 0.08, alpha: 1)
                 ]
             )
+
+            if activeSession.isChallenge || currentIdea != nil {
+                let detailFont = UIFont(name: "Noteworthy", size: 29)
+                    ?? UIFont.systemFont(ofSize: 29)
+                let detail = currentIdea.map { "\(activeSession.title) / \($0)" }
+                    ?? activeSession.title
+                detail.draw(
+                    at: CGPoint(x: 390, y: 48),
+                    withAttributes: [
+                        .font: detailFont,
+                        .foregroundColor: UIColor(white: 0.22, alpha: 1)
+                    ]
+                )
+            }
 
             let canvasRect = CGRect(x: 0, y: headerHeight, width: outputWidth, height: outputCanvasHeight)
 
@@ -523,6 +703,7 @@ private struct ScribbleSurface: View {
     let revealProgress: CGFloat
     @Binding var drawing: PKDrawing
     let isDrawingEnabled: Bool
+    let ink: DoodleInk
     @Binding var canvasSize: CGSize
 
     var body: some View {
@@ -533,7 +714,8 @@ private struct ScribbleSurface: View {
 
             InkOnlyCanvas(
                 drawing: $drawing,
-                isDrawingEnabled: isDrawingEnabled
+                isDrawingEnabled: isDrawingEnabled,
+                ink: ink
             )
         }
         .background(
@@ -545,6 +727,166 @@ private struct ScribbleSurface: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
         .accessibilityLabel("Scribble drawing canvas")
+    }
+}
+
+private struct ChallengePackButton: View {
+    let pack: ChallengePack
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: pack.session.symbol)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(Ink.blue)
+                    .frame(width: 34, height: 34)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(pack.session.title)
+                        .font(.doodleTitle(21))
+                        .foregroundStyle(Ink.black)
+
+                    Text(pack.session.instruction)
+                        .font(.doodleBody(16))
+                        .foregroundStyle(Ink.black.opacity(0.72))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+
+                    HStack(spacing: 9) {
+                        Label(pack.session.shortDuration, systemImage: "timer")
+                            .font(.doodleBody(14))
+                            .foregroundStyle(Ink.black.opacity(0.68))
+
+                        InkSwatches(inks: pack.session.inks, size: 12)
+                    }
+                }
+
+                Spacer(minLength: 6)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Ink.black.opacity(0.5))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, minHeight: 94, alignment: .leading)
+            .background(Color.white.opacity(0.56))
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Ink.black.opacity(0.24), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+            "\(pack.session.title). \(pack.session.instruction). \(pack.session.shortDuration)."
+        )
+    }
+}
+
+private struct CustomChallengeBuilder: View {
+    @Binding var duration: ChallengeDuration
+    @Binding var palette: InkPalette
+    let start: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Make Your Own")
+                .font(.doodleTitle(26))
+                .foregroundStyle(Ink.black)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Time")
+                    .font(.doodleTitle(17))
+                    .foregroundStyle(Ink.black)
+
+                Picker("Challenge time", selection: $duration) {
+                    ForEach(ChallengeDuration.allCases) { choice in
+                        Text(choice.label).tag(choice)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Ink")
+                    .font(.doodleTitle(17))
+                    .foregroundStyle(Ink.black)
+
+                Picker("Available inks", selection: $palette) {
+                    ForEach(InkPalette.allCases) { choice in
+                        Text(choice.label).tag(choice)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
+            Button(action: start) {
+                Label("Start challenge", systemImage: "play.fill")
+                    .font(.doodleTitle(19))
+                    .foregroundStyle(Color.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                    .background(Ink.black)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 6)
+    }
+}
+
+private struct InkPalettePicker: View {
+    let inks: [DoodleInk]
+    @Binding var selection: DoodleInk
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ForEach(inks) { ink in
+                Button {
+                    selection = ink
+                } label: {
+                    Circle()
+                        .fill(ink.color)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.white, lineWidth: selection == ink ? 3 : 0)
+                                .padding(3)
+                        )
+                        .overlay(Circle().stroke(Ink.black.opacity(0.65), lineWidth: 1))
+                        .frame(width: 36, height: 36)
+                        .scaleEffect(selection == ink ? 1.08 : 1)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(ink.name) ink")
+                .accessibilityAddTraits(selection == ink ? .isSelected : [])
+            }
+        }
+        .padding(8)
+        .background(NotebookColors.paper.opacity(0.96))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Ink.black.opacity(0.55), lineWidth: 1.5)
+        )
+    }
+}
+
+private struct InkSwatches: View {
+    let inks: [DoodleInk]
+    let size: CGFloat
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(inks) { ink in
+                Circle()
+                    .fill(ink.color)
+                    .overlay(Circle().stroke(Ink.black.opacity(0.45), lineWidth: 0.75))
+                    .frame(width: size, height: size)
+            }
+        }
+        .accessibilityHidden(true)
     }
 }
 
@@ -668,6 +1010,7 @@ private struct IconButton: View {
 private struct InkOnlyCanvas: UIViewRepresentable {
     @Binding var drawing: PKDrawing
     let isDrawingEnabled: Bool
+    let ink: DoodleInk
 
     func makeCoordinator() -> Coordinator {
         Coordinator(drawing: $drawing)
@@ -684,7 +1027,7 @@ private struct InkOnlyCanvas: UIViewRepresentable {
         canvas.isScrollEnabled = false
         canvas.minimumZoomScale = 1
         canvas.maximumZoomScale = 1
-        canvas.tool = PKInkingTool(.pen, color: .black, width: 5.5)
+        canvas.tool = PKInkingTool(.pen, color: ink.uiColor, width: 5.5)
         return canvas
     }
 
@@ -692,7 +1035,7 @@ private struct InkOnlyCanvas: UIViewRepresentable {
         if canvas.drawing.dataRepresentation() != drawing.dataRepresentation() {
             canvas.drawing = drawing
         }
-        canvas.tool = PKInkingTool(.pen, color: .black, width: 5.5)
+        canvas.tool = PKInkingTool(.pen, color: ink.uiColor, width: 5.5)
         canvas.isUserInteractionEnabled = isDrawingEnabled
     }
 
@@ -982,6 +1325,157 @@ private enum AppScreen {
     case drawing
     case result
     case archive
+    case challenges
+}
+
+private struct DoodleSession: Equatable {
+    let title: String
+    let instruction: String
+    let symbol: String
+    let duration: Int
+    let inks: [DoodleInk]
+    let isChallenge: Bool
+
+    static let classic = DoodleSession(
+        title: "Classic",
+        instruction: "Turn the scribble into anything.",
+        symbol: "scribble",
+        duration: 180,
+        inks: [.black],
+        isChallenge: false
+    )
+
+    var archiveTitle: String? {
+        isChallenge ? title : nil
+    }
+
+    var shortDuration: String {
+        duration < 60 ? "\(duration) sec" : "\(duration / 60) min"
+    }
+}
+
+private struct ChallengePack: Identifiable {
+    let id: String
+    let session: DoodleSession
+}
+
+private enum ChallengeLibrary {
+    static let packs = [
+        ChallengePack(
+            id: "quick-spark",
+            session: DoodleSession(
+                title: "Quick Spark",
+                instruction: "Make it recognizable before time runs out.",
+                symbol: "bolt.fill",
+                duration: 60,
+                inks: [.black],
+                isChallenge: true
+            )
+        ),
+        ChallengePack(
+            id: "build-it",
+            session: DoodleSession(
+                title: "Build It",
+                instruction: "Invent something useful from the scribble.",
+                symbol: "hammer.fill",
+                duration: 300,
+                inks: [.black, .blue],
+                isChallenge: true
+            )
+        ),
+        ChallengePack(
+            id: "mood-lines",
+            session: DoodleSession(
+                title: "Mood Lines",
+                instruction: "Draw the feeling your day left behind.",
+                symbol: "heart.fill",
+                duration: 300,
+                inks: [.black, .red],
+                isChallenge: true
+            )
+        ),
+        ChallengePack(
+            id: "soundtrack-sketch",
+            session: DoodleSession(
+                title: "Soundtrack Sketch",
+                instruction: "Let whatever you hear shape the scribble.",
+                symbol: "headphones",
+                duration: 600,
+                inks: [.black, .blue, .red],
+                isChallenge: true
+            )
+        )
+    ]
+}
+
+private enum DoodleInk: String, CaseIterable, Identifiable, Equatable {
+    case black
+    case blue
+    case red
+
+    var id: String { rawValue }
+    var name: String { rawValue.capitalized }
+
+    var color: Color {
+        switch self {
+        case .black:
+            return Ink.black
+        case .blue:
+            return Ink.blue
+        case .red:
+            return Ink.red
+        }
+    }
+
+    var uiColor: UIColor {
+        switch self {
+        case .black:
+            return UIColor(red: 0.07, green: 0.07, blue: 0.065, alpha: 1)
+        case .blue:
+            return UIColor(red: 0.10, green: 0.35, blue: 0.60, alpha: 1)
+        case .red:
+            return UIColor(red: 0.78, green: 0.16, blue: 0.14, alpha: 1)
+        }
+    }
+}
+
+private enum InkPalette: String, CaseIterable, Identifiable {
+    case black
+    case duo
+    case trio
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .black: return "Black"
+        case .duo: return "Two"
+        case .trio: return "Three"
+        }
+    }
+
+    var inks: [DoodleInk] {
+        switch self {
+        case .black: return [.black]
+        case .duo: return [.black, .blue]
+        case .trio: return [.black, .blue, .red]
+        }
+    }
+}
+
+private enum ChallengeDuration: Int, CaseIterable, Identifiable {
+    case oneMinute = 60
+    case threeMinutes = 180
+    case fiveMinutes = 300
+    case tenMinutes = 600
+    case fifteenMinutes = 900
+
+    var id: Int { rawValue }
+    var seconds: Int { rawValue }
+
+    var label: String {
+        "\(rawValue / 60)m"
+    }
 }
 
 private enum IdeaBank {
@@ -1007,6 +1501,14 @@ private struct DoodleRecord: Codable, Identifiable, Hashable {
     let createdAt: Date
     let imageFilename: String
     let drawingFilename: String
+    let sessionTitle: String?
+    let prompt: String?
+
+    var shareCaption: String {
+        let session = sessionTitle.map { "the \($0) challenge" } ?? "one random scribble"
+        let idea = prompt.map { " My idea was \($0)." } ?? ""
+        return "I turned \(session) into this with Just Doodle.\(idea) #JustDoodle"
+    }
 }
 
 @MainActor
@@ -1027,7 +1529,15 @@ private final class DoodleArchiveStore: ObservableObject {
         load()
     }
 
-    func save(image: UIImage, drawing: PKDrawing) -> DoodleRecord? {
+    func save(
+        image: UIImage,
+        drawing: PKDrawing,
+        sessionTitle: String?,
+        prompt: String?
+    ) -> DoodleRecord? {
+        let previousRecords = records
+        var createdURLs: [URL] = []
+
         do {
             try prepareDirectory()
             let id = UUID()
@@ -1035,22 +1545,31 @@ private final class DoodleArchiveStore: ObservableObject {
             let drawingFilename = "\(id.uuidString).drawing"
             guard let imageData = image.pngData() else { return nil }
 
-            try imageData.write(to: directoryURL.appendingPathComponent(imageFilename), options: .atomic)
+            let imageURL = directoryURL.appendingPathComponent(imageFilename)
+            let drawingURL = directoryURL.appendingPathComponent(drawingFilename)
+
+            try imageData.write(to: imageURL, options: .atomic)
+            createdURLs.append(imageURL)
             try drawing.dataRepresentation().write(
-                to: directoryURL.appendingPathComponent(drawingFilename),
+                to: drawingURL,
                 options: .atomic
             )
+            createdURLs.append(drawingURL)
 
             let record = DoodleRecord(
                 id: id,
                 createdAt: Date(),
                 imageFilename: imageFilename,
-                drawingFilename: drawingFilename
+                drawingFilename: drawingFilename,
+                sessionTitle: sessionTitle,
+                prompt: prompt
             )
             records.insert(record, at: 0)
             try persist()
             return record
         } catch {
+            records = previousRecords
+            createdURLs.forEach { try? fileManager.removeItem(at: $0) }
             return nil
         }
     }
@@ -1060,10 +1579,15 @@ private final class DoodleArchiveStore: ObservableObject {
     }
 
     func delete(_ record: DoodleRecord) {
+        let previousRecords = records
         records.removeAll { $0.id == record.id }
-        try? fileManager.removeItem(at: directoryURL.appendingPathComponent(record.imageFilename))
-        try? fileManager.removeItem(at: directoryURL.appendingPathComponent(record.drawingFilename))
-        try? persist()
+        do {
+            try persist()
+            try? fileManager.removeItem(at: directoryURL.appendingPathComponent(record.imageFilename))
+            try? fileManager.removeItem(at: directoryURL.appendingPathComponent(record.drawingFilename))
+        } catch {
+            records = previousRecords
+        }
     }
 
     private func load() {
@@ -1071,6 +1595,7 @@ private final class DoodleArchiveStore: ObservableObject {
             try prepareDirectory()
             guard fileManager.fileExists(atPath: indexURL.path) else { return }
             records = try decoder.decode([DoodleRecord].self, from: Data(contentsOf: indexURL))
+                .filter { fileManager.fileExists(atPath: directoryURL.appendingPathComponent($0.imageFilename).path) }
                 .sorted { $0.createdAt > $1.createdAt }
         } catch {
             records = []
@@ -1105,9 +1630,16 @@ private struct ArchivePreviewView: View {
                 HStack {
                     IconButton(systemName: "xmark", label: "Close") { dismiss() }
                     Spacer()
-                    Text(record.createdAt.doodleDate)
-                        .font(.doodleBody(20))
-                        .foregroundStyle(Ink.black)
+                    VStack(spacing: 1) {
+                        Text(record.sessionTitle ?? "Classic")
+                            .font(.doodleTitle(18))
+                            .foregroundStyle(Ink.black)
+                            .lineLimit(1)
+                        Text(record.createdAt.doodleDate)
+                            .font(.doodleBody(14))
+                            .foregroundStyle(Ink.black.opacity(0.66))
+                            .lineLimit(1)
+                    }
                     Spacer()
                     IconButton(systemName: "trash", label: "Delete doodle") {
                         confirmDelete = true
@@ -1132,7 +1664,7 @@ private struct ArchivePreviewView: View {
                     }
                     IconButton(systemName: "square.and.arrow.up", label: "Share doodle") {
                         guard let image else { return }
-                        shareImage = ShareImage(image: image)
+                        shareImage = ShareImage(image: image, caption: record.shareCaption)
                     }
                     Spacer()
                 }
@@ -1141,7 +1673,7 @@ private struct ArchivePreviewView: View {
         }
         .preferredColorScheme(.light)
         .sheet(item: $shareImage) { item in
-            ShareSheet(items: [item.image])
+            ShareSheet(items: [item.image, item.caption])
         }
         .alert(item: $notice) { notice in
             Alert(
@@ -1203,6 +1735,15 @@ private struct ShareSheet: UIViewControllerRepresentable {
 private struct ShareImage: Identifiable {
     let id = UUID()
     let image: UIImage
+    let caption: String
+}
+
+private enum Haptics {
+    static func timeUp() {
+        let generator = UINotificationFeedbackGenerator()
+        generator.prepare()
+        generator.notificationOccurred(.warning)
+    }
 }
 
 private struct Notice: Identifiable {
