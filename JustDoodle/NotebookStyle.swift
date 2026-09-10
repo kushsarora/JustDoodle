@@ -86,6 +86,62 @@ enum Ink {
     static let red = Color(red: 0.78, green: 0.16, blue: 0.14)
 }
 
+struct HandCircle: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY + 2))
+        path.addCurve(to: CGPoint(x: rect.maxX - 2, y: rect.midY),
+            control1: CGPoint(x: rect.maxX * 0.83, y: rect.minY - 1),
+            control2: CGPoint(x: rect.maxX + 1, y: rect.height * 0.23))
+        path.addCurve(to: CGPoint(x: rect.midX - 2, y: rect.maxY - 2),
+            control1: CGPoint(x: rect.maxX - 1, y: rect.height * 0.81),
+            control2: CGPoint(x: rect.width * 0.77, y: rect.maxY + 1))
+        path.addCurve(to: CGPoint(x: rect.minX + 2, y: rect.midY - 2),
+            control1: CGPoint(x: rect.width * 0.20, y: rect.maxY),
+            control2: CGPoint(x: rect.minX - 1, y: rect.height * 0.78))
+        path.addCurve(to: CGPoint(x: rect.midX, y: rect.minY + 2),
+            control1: CGPoint(x: rect.minX, y: rect.height * 0.18),
+            control2: CGPoint(x: rect.width * 0.25, y: rect.minY + 1))
+        path.closeSubpath()
+        return path
+    }
+}
+
+struct SketchbookBinding: View {
+    var body: some View {
+        Canvas { context, size in
+            var spine = Path()
+            spine.move(to: CGPoint(x: 22, y: 0))
+            spine.addLine(to: CGPoint(x: 22, y: size.height))
+            context.stroke(spine, with: .color(Ink.red.opacity(0.35)), lineWidth: 1)
+            for y in stride(from: CGFloat(30), to: size.height, by: 38) {
+                var stitch = Path()
+                stitch.move(to: CGPoint(x: 4, y: y + 5))
+                stitch.addQuadCurve(to: CGPoint(x: 22, y: y), control: CGPoint(x: 8, y: y - 10))
+                context.stroke(stitch, with: .color(Ink.black.opacity(0.35)), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+            }
+        }
+        .allowsHitTesting(false).accessibilityHidden(true)
+    }
+}
+
+struct InkArrival: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var arrived = false
+    var delay: Double = 0
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(arrived ? 1 : 0)
+            .offset(y: arrived || reduceMotion ? 0 : 10)
+            .onAppear {
+                withAnimation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.85).delay(delay)) {
+                    arrived = true
+                }
+            }
+    }
+}
+
 extension Font {
     static func doodleTitle(_ size: CGFloat) -> Font {
         .custom("Noteworthy-Bold", size: size, relativeTo: .title)

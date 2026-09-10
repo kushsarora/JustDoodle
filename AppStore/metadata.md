@@ -33,7 +33,7 @@ IDEA BOX
 Tap for a fresh one-word drawing idea whenever inspiration runs dry.
 
 YOUR DOODLE BOOK
-Keep finished drawings on your device. Resume an unfinished drawing after an interruption. Save to Photos or share through your favorite apps.
+Keep finished drawings on your device and search by challenge, idea, or date. Resume an unfinished drawing after an interruption. Save to Photos, share through your favorite apps, or jump into another round.
 
 No accounts. No ads. No sound effects. Just a time-up vibration you can turn off.
 
@@ -47,7 +47,7 @@ drawing,scribble,sketch,creativity,art,challenge,notebook,pen,offline,relax
 
 No account or login is required. No purchases, ads, analytics, or server connection are present.
 
-Tap the black dot on the home screen to start Classic. The scribble reveals, then a three-minute timer starts. Draw with a finger or Apple Pencil. Tap Done to finish early; the drawing is saved to the local Doodle Book. Use the Photos or share icons on the result.
+Tap Start drawing on the home screen to start Classic. The scribble reveals, then a three-minute timer starts. Draw with a finger or Apple Pencil. Tap Done to finish early; the drawing is saved to the local Doodle Book. Use the Photos or share icons on the result, or Draw again for a fresh scribble with the same rules.
 
 Challenges are available from the home screen. The timer continues during interruptions; an expired recovered draft opens as a finished drawing.
 

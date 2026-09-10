@@ -198,6 +198,12 @@ struct DoodleRecord: Codable, Identifiable, Hashable {
         let challenge = sessionTitle.map { " Challenge: \($0)." } ?? ""
         return "One scribble, my imagination.\(challenge) Made with Just Doodle. #JustDoodle"
     }
+
+    func matches(search: String) -> Bool {
+        let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        return query.isEmpty || [sessionTitle ?? "Classic", prompt ?? "", createdAt.doodleDate]
+            .contains { $0.localizedStandardContains(query) }
+    }
 }
 
 struct SessionClock: Codable, Equatable {

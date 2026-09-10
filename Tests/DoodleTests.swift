@@ -349,6 +349,50 @@ final class DoodleTests: XCTestCase {
         await game.discard()
     }
 
+    func testSearchMatchesMetadataAndLegacyRecords() {
+        let record = DoodleRecord(id: UUID(), createdAt: Date(), imageFilename: "page.png",
+            drawingFilename: "page.drawing", sessionTitle: "Build It", prompt: "Rocket")
+        XCTAssertTrue(record.matches(search: "  rocket\n"))
+        XCTAssertTrue(record.matches(search: "BUILD"))
+        XCTAssertTrue(record.matches(search: " "))
+        XCTAssertFalse(record.matches(search: "piano"))
+        let legacy = DoodleRecord(id: UUID(), createdAt: Date(), imageFilename: "old.png",
+            drawingFilename: "old.drawing", sessionTitle: nil, prompt: nil)
+        XCTAssertTrue(legacy.matches(search: "classic"))
+        XCTAssertTrue(legacy.matches(search: legacy.createdAt.doodleDate))
+    }
+
+    func testReplayPreservesRulesAndCreatesFreshRound() async throws {
+        let archive = DoodleArchiveStore(directory: try temporaryDirectory())
+        let game = DoodleGame(archive: archive)
+        await game.load()
+        let session = try XCTUnwrap(ChallengeLibrary.packs.first?.session)
+        game.begin(session, reduceMotion: true)
+        for _ in 0..<100 where game.screen == .revealing {
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+        XCTAssertEqual(game.screen, .drawing)
+        let originalID = game.draft?.id
+        let originalScribble = game.draft?.scribble
+        game.playAgain()
+        XCTAssertEqual(game.draft?.id, originalID)
+        game.finish()
+        for _ in 0..<100 where game.isSaving {
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+        XCTAssertNotNil(game.savedRecord)
+        game.playAgain(reduceMotion: true)
+        XCTAssertNotEqual(game.draft?.id, originalID)
+        XCTAssertNotEqual(game.draft?.scribble, originalScribble)
+        XCTAssertEqual(game.session.duration, session.duration)
+        XCTAssertEqual(game.session.inks, session.inks)
+        XCTAssertEqual(game.session.title, session.title)
+        XCTAssertTrue(game.drawing.strokes.isEmpty)
+        XCTAssertNil(game.savedRecord)
+        XCTAssertEqual(archive.records.count, 1)
+        await game.discard()
+    }
+
     private func sample(_ image: UIImage, x: Int, y: Int) throws -> [UInt8] {
         let cropped = try XCTUnwrap(image.cgImage?.cropping(to: CGRect(x: x, y: y, width: 1, height: 1)))
         var pixel = [UInt8](repeating: 0, count: 4)

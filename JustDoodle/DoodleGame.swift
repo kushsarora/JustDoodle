@@ -154,6 +154,13 @@ final class DoodleGame: ObservableObject {
         }
     }
 
+    func playAgain(reduceMotion: Bool = false) {
+        guard screen == .result, !isSaving, savedRecord != nil else { return }
+        let nextSession = session
+        returnHome()
+        begin(nextSession, reduceMotion: reduceMotion)
+    }
+
     func returnHome() {
         guard !isSaving, savedRecord != nil else { return }
         draft = nil

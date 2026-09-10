@@ -14,6 +14,7 @@ struct ContentView: View {
     @State private var shareImage: ShareImage?
     @State private var customDuration = ChallengeDuration.threeMinutes
     @State private var customPalette = InkPalette.black
+    @State private var archiveSearch = ""
     private let timer = Timer.publish(every: 0.25, on: .main, in: .common).autoconnect()
 
     init() {
@@ -25,11 +26,13 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             NotebookBackground()
-            screenContent
-                .id(game.screen == .revealing ? AppScreen.drawing : game.screen)
-                .transition(.opacity)
-                .disabled(showSplash || game.isDiscarding)
-                .accessibilityHidden(showSplash)
+            if !showSplash {
+                screenContent
+                    .id(game.screen == .revealing ? AppScreen.drawing : game.screen)
+                    .transition(reduceMotion ? .opacity : .asymmetric(
+                        insertion: .opacity.combined(with: .offset(y: 12)), removal: .identity))
+                    .disabled(game.isDiscarding)
+            }
             if showSplash {
                 DoodlersClubSplash()
                     .transition(.opacity)
@@ -37,7 +40,7 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(.light)
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: game.screen == .revealing ? AppScreen.drawing : game.screen)
+        .animation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.88), value: game.screen == .revealing ? AppScreen.drawing : game.screen)
         .tint(Ink.blue)
         .task {
             await game.load()
@@ -97,19 +100,8 @@ struct ContentView: View {
             .padding(.horizontal, 20)
 
             ScrollView {
-                VStack(spacing: 28) {
-                    VStack(spacing: 14) {
-                        Image("DoodlersClubMark")
-                            .resizable().scaledToFit()
-                            .frame(width: 88, height: 88)
-                            .accessibilityHidden(true)
-                        Text("Just Doodle.")
-                            .font(.doodleTitle(44))
-                            .foregroundStyle(Ink.black)
-                            .lineLimit(1).minimumScaleFactor(0.65)
-                        HandUnderline().stroke(Ink.blue, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                            .frame(width: 190, height: 8)
-                    }
+                VStack(spacing: 26) {
+                    HomeMasthead().modifier(InkArrival())
                     if let error = game.recoveryError ?? archive.loadError {
                         Text(error).font(.body).foregroundStyle(Ink.red)
                         Link("Contact support", destination: ReleaseInfo.supportMailURL)
@@ -125,6 +117,7 @@ struct ContentView: View {
                     } else {
                         StartDot { game.begin(.classic, reduceMotion: reduceMotion) }
                             .disabled(!game.canBegin)
+                            .modifier(InkArrival(delay: 0.12))
                         Button { game.screen = .challenges } label: {
                             HStack(spacing: 14) {
                                 Image(systemName: "sparkles").foregroundStyle(Ink.blue)
@@ -135,23 +128,25 @@ struct ContentView: View {
                             .foregroundStyle(Ink.black)
                             .padding(.vertical, 18)
                             .contentShape(Rectangle())
-                            .overlay(alignment: .top) { Rectangle().fill(NotebookColors.rule).frame(height: 1) }
-                            .overlay(alignment: .bottom) { Rectangle().fill(NotebookColors.rule).frame(height: 1) }
+                            .overlay(alignment: .top) { HandUnderline().stroke(Ink.black.opacity(0.2), lineWidth: 1).frame(height: 4) }
+                            .overlay(alignment: .bottom) { HandUnderline().stroke(Ink.black.opacity(0.2), lineWidth: 1).frame(height: 4) }
                         }
                         .buttonStyle(InkPressStyle())
                         .disabled(!game.canBegin)
                         .accessibilityIdentifier("challenges")
+                        .modifier(InkArrival(delay: 0.2))
                     }
-                    Text("The Doodler's Club")
-                        .font(.doodleBody(18)).foregroundStyle(.secondary)
+                    Text(archive.records.count == 1 ? "1 page in your book" : "\(archive.records.count) pages in your book")
+                        .font(.doodleBody(15)).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: 420)
-                .padding(.horizontal, 28)
-                .padding(.top, 20)
+                .padding(.horizontal, 36)
+                .padding(.top, 12)
                 .padding(.bottom, 30)
                 .frame(maxWidth: .infinity)
             }
         }
+        .background(SketchbookBinding())
     }
 
     private var drawingView: some View {
@@ -170,9 +165,8 @@ struct ContentView: View {
                     }
                         .padding(.horizontal, 8)
                         .frame(width: 88, height: 44)
-                        .background(game.screen == .drawing ? Ink.black : Ink.black.opacity(0.3))
+                        .background(HandDrawnBox().fill(game.screen == .drawing ? Ink.black : Ink.black.opacity(0.3)))
                         .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
                 .buttonStyle(InkPressStyle())
                 .disabled(game.screen != .drawing)
@@ -180,16 +174,10 @@ struct ContentView: View {
                 .accessibilityIdentifier("finishDrawing")
             }
             .overlay {
-                Text(DoodleTime.string(game.secondsRemaining))
-                    .font(.doodleBody(26)).monospacedDigit()
-                    .lineLimit(1).minimumScaleFactor(0.7)
-                    .frame(width: 96)
-                    .foregroundStyle(game.secondsRemaining <= 20 ? Ink.red : Ink.black)
-                    .accessibilityLabel("\(game.secondsRemaining) seconds remaining")
-                    .accessibilityIdentifier("roundTimer")
-                    .allowsHitTesting(false)
+                RoundClock(remaining: game.secondsRemaining, duration: game.session.duration)
             }
             .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+            .frame(minHeight: 56)
             .padding(.horizontal, 16).padding(.vertical, 6)
 
             if game.session.isChallenge {
@@ -219,7 +207,7 @@ struct ContentView: View {
                         selection: Binding(get: { game.selectedInk }, set: { game.selectInk($0) }))
                 } else {
                     HStack(spacing: 10) {
-                        Circle().fill(Ink.black).frame(width: 26, height: 26)
+                        PenSwatch(ink: .black, selected: true).accessibilityHidden(true)
                         Text("Black ink").font(.doodleBody(16)).lineLimit(1).minimumScaleFactor(0.7)
                     }
                     .foregroundStyle(Ink.black)
@@ -240,6 +228,11 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(game.isSaving ? "Saving..." : (game.savedRecord == nil ? "Finished." : "Saved."))
                         .font(.doodleTitle(28))
+                        .foregroundStyle(game.savedRecord == nil ? Ink.black : Ink.blue)
+                        .overlay(alignment: .bottom) {
+                            HandUnderline().stroke(Ink.blue, lineWidth: 2).frame(height: 4)
+                                .opacity(game.savedRecord == nil ? 0 : 1)
+                        }
                         .accessibilityIdentifier("resultStatus")
                     Text(game.session.title).font(.doodleBody(17)).foregroundStyle(.secondary)
                 }
@@ -271,6 +264,9 @@ struct ContentView: View {
                         game.screen = .archive
                     }
                     .disabled(game.savedRecord == nil || game.isSaving)
+                    IconButton(systemName: "house", label: "Back to home") { game.returnHome() }
+                        .disabled(game.savedRecord == nil || game.isSaving)
+                        .accessibilityIdentifier("backHome")
                 }
             } else {
                 Spacer()
@@ -283,10 +279,13 @@ struct ContentView: View {
                     .buttonStyle(InkCommandStyle())
                 Button("Discard drawing", role: .destructive) { confirmDiscard = true }.frame(minHeight: 44)
             } else {
-                Button { game.returnHome() } label: { Label("Back to home", systemImage: "house") }
+                Button { game.playAgain(reduceMotion: reduceMotion) } label: {
+                    Label("Draw again", systemImage: "arrow.right")
+                        .frame(maxWidth: 340)
+                }
                     .buttonStyle(InkCommandStyle())
                     .disabled(game.isSaving)
-                    .accessibilityIdentifier("backHome")
+                    .accessibilityIdentifier("drawAgain")
             }
         }
         .padding(.horizontal, 16).padding(.bottom, 12)
@@ -299,6 +298,7 @@ struct ContentView: View {
                 VStack(spacing: 0) {
                     ForEach(ChallengeLibrary.packs) { pack in
                         ChallengePackButton(pack: pack) { game.begin(pack.session, reduceMotion: reduceMotion) }
+                            .modifier(InkArrival())
                     }
                     CustomChallengeBuilder(duration: $customDuration, palette: $customPalette) {
                         game.begin(DoodleSession(title: "My Challenge",
@@ -325,29 +325,57 @@ struct ContentView: View {
                 Text("Nothing here yet.").font(.doodleBody(24)).padding()
                 Spacer()
             } else {
+                archiveSearchField
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 145, maximum: 280), spacing: 16)], spacing: 20) {
-                        ForEach(archive.records) { record in
+                        ForEach(visibleRecords) { record in
                             Button { selectedRecord = record } label: {
                                 DoodleThumbnail(record: record, archive: archive)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(InkPressStyle())
                             .accessibilityLabel("\(record.sessionTitle ?? "Classic") drawing, \(record.createdAt.doodleDate)")
                             .accessibilityIdentifier("archiveDrawing")
                         }
                     }
-                    .padding(16)
+                    .frame(maxWidth: 980).padding(20).frame(maxWidth: .infinity)
                 }
+                .scrollDismissesKeyboard(.interactively)
                 .refreshable { await archive.load() }
+                .overlay {
+                    if visibleRecords.isEmpty {
+                        Text("No matching pages.").font(.doodleBody(23)).padding()
+                            .allowsHitTesting(false)
+                    }
+                }
             }
         }
         .task { await archive.load() }
+    }
+
+    private var visibleRecords: [DoodleRecord] {
+        archive.records.filter { $0.matches(search: archiveSearch) }
+    }
+
+    private var archiveSearchField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass").foregroundStyle(Ink.blue)
+            TextField("Search pages", text: $archiveSearch)
+                .font(.doodleBody(18)).textInputAutocapitalization(.never).autocorrectionDisabled()
+                .accessibilityIdentifier("archiveSearch")
+            if !archiveSearch.isEmpty {
+                IconButton(systemName: "xmark", label: "Clear search") { archiveSearch = "" }
+            }
+        }
+        .frame(minHeight: 48)
+        .overlay(alignment: .bottom) { HandUnderline().stroke(Ink.black.opacity(0.3), lineWidth: 1).frame(height: 4) }
+        .frame(maxWidth: 940).padding(.horizontal, 24).padding(.bottom, 8)
     }
 
     private func pageHeader(_ title: String) -> some View {
         HStack(spacing: 10) {
             IconButton(systemName: "chevron.left", label: "Back to home") { game.screen = .home }
             Text(title).font(.doodleTitle(30)).lineLimit(1).minimumScaleFactor(0.7)
+                .overlay(alignment: .bottom) { HandUnderline().stroke(Ink.blue, lineWidth: 2).frame(height: 3) }
             Spacer(minLength: 0)
         }
         .foregroundStyle(Ink.black).padding(.horizontal, 16).padding(.vertical, 6)
@@ -375,6 +403,8 @@ struct DoodleThumbnail: View {
                 }
             }
             .aspectRatio(1200.0 / 1760.0, contentMode: .fit)
+            .overlay(Rectangle().stroke(Ink.black.opacity(0.15), lineWidth: 1))
+            .shadow(color: Ink.black.opacity(0.08), radius: 2, x: 2, y: 3)
             Text(record.sessionTitle ?? "Classic")
                 .font(.doodleTitle(17)).foregroundStyle(Ink.black).lineLimit(1)
             Text(record.createdAt.doodleDate)

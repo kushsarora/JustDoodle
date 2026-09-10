@@ -26,12 +26,13 @@ struct DoodlersClubSplash: View {
             }
             .padding(.horizontal, 28)
             .opacity(inkVisible ? 1 : 0)
-            .scaleEffect(inkVisible ? 1 : 0.96)
+            .scaleEffect(inkVisible || reduceMotion ? 1 : 0.94)
+            .rotationEffect(.degrees(inkVisible || reduceMotion ? 0 : -4))
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("The Doodler's Club")
         .onAppear {
-            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.5)) {
+            withAnimation(reduceMotion ? nil : .spring(response: 0.65, dampingFraction: 0.82)) {
                 inkVisible = true
             }
         }
@@ -81,7 +82,10 @@ struct ChallengePackButton: View {
                 Image(systemName: pack.session.symbol)
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(Ink.blue)
-                    .frame(width: 34, height: 34)
+                    .frame(width: 44, height: 48)
+                    .background(HandDrawnBox().fill(Ink.blue.opacity(0.07)))
+                    .overlay(HandDrawnBox().stroke(Ink.blue.opacity(0.6), lineWidth: 1))
+                    .rotationEffect(.degrees(-4))
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(pack.session.title)
@@ -113,7 +117,7 @@ struct ChallengePackButton: View {
             .padding(.vertical, 18)
             .frame(maxWidth: .infinity, minHeight: 94, alignment: .leading)
             .contentShape(Rectangle())
-            .overlay(alignment: .bottom) { Rectangle().fill(NotebookColors.rule).frame(height: 1) }
+            .overlay(alignment: .bottom) { HandUnderline().stroke(Ink.black.opacity(0.16), lineWidth: 1).frame(height: 5) }
         }
         .buttonStyle(InkPressStyle())
         .accessibilityIdentifier("challenge-\(pack.id)")
@@ -152,12 +156,19 @@ struct CustomChallengeBuilder: View {
                     .font(.doodleTitle(17))
                     .foregroundStyle(Ink.black)
 
-                Picker("Available inks", selection: $palette) {
+                HStack(spacing: 12) {
                     ForEach(InkPalette.allCases) { choice in
-                        Text(choice.label).tag(choice)
+                        Button { palette = choice } label: {
+                            InkSwatches(inks: choice.inks, size: 16)
+                                .frame(maxWidth: .infinity, minHeight: 48)
+                                .background(HandDrawnBox().fill(palette == choice ? Ink.blue.opacity(0.08) : .clear))
+                                .overlay(HandDrawnBox().stroke(palette == choice ? Ink.blue : Ink.black.opacity(0.2), lineWidth: 1.5))
+                        }
+                        .buttonStyle(InkPressStyle())
+                        .accessibilityLabel(choice.label)
+                        .accessibilityAddTraits(palette == choice ? .isSelected : [])
                     }
                 }
-                .pickerStyle(.segmented)
             }
 
             Button(action: start) {
@@ -181,19 +192,9 @@ struct InkPalettePicker: View {
                 Button {
                     selection = ink
                 } label: {
-                    Circle()
-                        .fill(ink.color)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.white, lineWidth: selection == ink ? 3 : 0)
-                                .padding(3)
-                        )
-                        .overlay(Circle().stroke(Ink.black.opacity(0.65), lineWidth: 1))
-                        .frame(width: 30, height: 30)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
+                    PenSwatch(ink: ink, selected: selection == ink)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(InkPressStyle())
                 .accessibilityLabel("\(ink.name) ink")
                 .accessibilityIdentifier("ink-\(ink.rawValue)")
                 .accessibilityAddTraits(selection == ink ? .isSelected : [])
@@ -229,7 +230,7 @@ struct IdeaBox: View {
         Button(action: action) {
             ZStack {
                 HandDrawnBox()
-                    .fill(NotebookColors.paper.opacity(0.96))
+                    .fill(Color(red: 0.97, green: 0.96, blue: 0.74))
 
                 HandDrawnBox()
                     .stroke(
@@ -254,13 +255,14 @@ struct IdeaBox: View {
                         .minimumScaleFactor(0.68)
                         .frame(maxWidth: 86)
                         .id(idea)
-                        .transition(.opacity)
+                        .transition(reduceMotion ? .opacity : .asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 5)), removal: .opacity))
                 }
                 .padding(9)
             }
             .frame(width: 100, height: 100)
             .dynamicTypeSize(...DynamicTypeSize.accessibility1)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: idea)
+            .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.8), value: idea)
         }
         .buttonStyle(InkPressStyle())
         .accessibilityIdentifier("ideaBox")
@@ -300,16 +302,16 @@ struct StartDot: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 14) {
+            VStack(spacing: 12) {
                 ZStack {
-                    Circle().stroke(Ink.black.opacity(0.12), lineWidth: 1)
-                        .frame(width: 92, height: 92)
-                    Circle().fill(Ink.black).frame(width: 64, height: 64)
-                    Image(systemName: "pencil.tip").font(.system(size: 25, weight: .medium))
+                    HandCircle().stroke(Ink.blue, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                        .frame(width: 102, height: 96).rotationEffect(.degrees(-12))
+                    HandCircle().fill(Ink.black).frame(width: 78, height: 74)
+                    Image(systemName: "pencil").font(.system(size: 28, weight: .medium))
                         .foregroundStyle(.white)
                 }
                 Text("Start drawing").font(.doodleTitle(28)).foregroundStyle(Ink.black)
-                Text("Classic · 3 minutes").font(.doodleBody(17)).foregroundStyle(.secondary)
+                Text("Classic · 3 minutes").font(.doodleBody(17)).foregroundStyle(Ink.blue)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
@@ -350,10 +352,10 @@ struct InkCommandStyle: ButtonStyle {
             .font(.doodleTitle(20))
             .foregroundStyle(.white)
             .padding(.horizontal, 18)
-            .padding(.vertical, 10)
+            .padding(.vertical, 16)
             .frame(minHeight: 48)
-            .background(Ink.black.opacity(!isEnabled ? 0.3 : configuration.isPressed ? 0.75 : 1))
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .background(HandDrawnBox().fill(Ink.black.opacity(!isEnabled ? 0.3 : configuration.isPressed ? 0.75 : 1)))
+            .contentShape(Rectangle())
     }
 }
 
@@ -364,7 +366,81 @@ struct InkPressStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .opacity(!isEnabled ? 0.35 : configuration.isPressed ? 0.65 : 1)
-            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.96 : 1)
+            .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.68), value: configuration.isPressed)
+    }
+}
+
+struct HomeMasthead: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var signed = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top) {
+                Text("Just\nDoodle.")
+                    .font(.doodleTitle(52)).lineSpacing(-2)
+                    .lineLimit(2).minimumScaleFactor(0.65)
+                    .foregroundStyle(Ink.black)
+                Spacer(minLength: 0)
+                Image("DoodlersClubMark").resizable().scaledToFit()
+                    .frame(width: 66, height: 66)
+                    .rotationEffect(.degrees(signed ? 9 : 0))
+                    .padding(.top, 16).accessibilityHidden(true)
+            }
+            HandUnderline().trim(from: 0, to: signed ? 1 : 0)
+                .stroke(Ink.blue, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .frame(height: 10).padding(.trailing, 70)
+            Text("The Doodler's Club").font(.doodleBody(18))
+                .foregroundStyle(Ink.blue).padding(.top, 6)
+        }
+        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+        .onAppear {
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.7).delay(0.15)) { signed = true }
+        }
+    }
+}
+
+struct PenSwatch: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let ink: DoodleInk
+    let selected: Bool
+
+    var body: some View {
+        VStack(spacing: 5) {
+            Image(systemName: "pencil.tip.crop.circle.fill")
+                .font(.system(size: 30, weight: .regular))
+                .foregroundStyle(ink.color)
+                .rotationEffect(.degrees(selected ? -12 : 0))
+                .offset(y: selected ? -3 : 0)
+            HandUnderline().stroke(ink.color, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                .frame(width: 24, height: 4).opacity(selected ? 1 : 0)
+        }
+        .frame(width: 44, height: 52)
+        .contentShape(Rectangle())
+        .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.7), value: selected)
+    }
+}
+
+struct RoundClock: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let remaining: Int
+    let duration: Int
+
+    var body: some View {
+        ZStack {
+            HandCircle().stroke(Ink.black.opacity(0.09), lineWidth: 1.5)
+            HandCircle().trim(from: 0, to: CGFloat(max(0, remaining)) / CGFloat(max(1, duration)))
+                .stroke(remaining <= 20 ? Ink.red : Ink.blue, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                .animation(reduceMotion ? nil : .linear(duration: 0.35), value: remaining)
+            Text(DoodleTime.string(remaining))
+                .font(.doodleBody(24)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.65)
+                .foregroundStyle(remaining <= 20 ? Ink.red : Ink.black)
+                .padding(.horizontal, 7)
+                .accessibilityLabel("\(remaining) seconds remaining")
+                .accessibilityIdentifier("roundTimer")
+        }
+        .frame(width: 94, height: 52)
+        .allowsHitTesting(false)
     }
 }

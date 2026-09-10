@@ -80,6 +80,68 @@ final class DoodleUITests: XCTestCase {
         XCTAssertTrue(app.images["finishedImage"].waitForExistence(timeout: 10))
     }
 
+    func testReplayAndBookSearch() {
+        startClassic()
+        draw()
+        app.buttons["finishDrawing"].tap()
+        let replay = app.buttons["drawAgain"]
+        XCTAssertTrue(replay.waitForExistence(timeout: 10))
+        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: replay)
+        waitForExpectations(timeout: 10)
+        replay.tap()
+        XCTAssertTrue(app.buttons["finishDrawing"].waitForExistence(timeout: 5))
+        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: app.buttons["finishDrawing"])
+        waitForExpectations(timeout: 5)
+        draw()
+        app.buttons["finishDrawing"].tap()
+        XCTAssertTrue(app.buttons["backHome"].waitForExistence(timeout: 10))
+        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: app.buttons["backHome"])
+        waitForExpectations(timeout: 10)
+        app.buttons["backHome"].tap()
+        app.buttons["doodleBook"].tap()
+        let search = app.textFields["archiveSearch"]
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        search.tap()
+        search.typeText("no-such-page")
+        XCTAssertTrue(app.staticTexts["No matching pages."].waitForExistence(timeout: 5))
+        app.buttons["Clear search"].tap()
+        XCTAssertEqual(app.buttons.matching(identifier: "archiveDrawing").count, 2)
+    }
+
+    func testCustomChallengeUsesSelectedPalette() {
+        app.buttons["challenges"].tap()
+        app.swipeUp()
+        app.swipeUp()
+        app.buttons["Three"].tap()
+        app.segmentedControls.buttons["1m"].tap()
+        screenshot("Custom Challenge")
+        app.buttons["startCustomChallenge"].tap()
+        XCTAssertTrue(app.buttons["ink-red"].waitForExistence(timeout: 5))
+        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: app.buttons["ink-red"])
+        waitForExpectations(timeout: 5)
+        XCTAssertTrue(app.buttons["ink-black"].exists)
+        XCTAssertTrue(app.buttons["ink-blue"].exists)
+        app.buttons["ink-red"].tap()
+        draw()
+        app.buttons["finishDrawing"].tap()
+        XCTAssertTrue(app.images["finishedImage"].waitForExistence(timeout: 10))
+    }
+
+    func testResultControlsRespectScreenInsets() {
+        startClassic()
+        draw()
+        app.buttons["finishDrawing"].tap()
+        let status = app.staticTexts["resultStatus"]
+        XCTAssertTrue(status.waitForExistence(timeout: 10))
+        expectation(for: NSPredicate(format: "label == 'Saved.'"), evaluatedWith: status)
+        waitForExpectations(timeout: 10)
+        let window = app.windows.firstMatch.frame
+        XCTAssertGreaterThanOrEqual(status.frame.minY, window.minY + 20)
+        XCTAssertLessThanOrEqual(app.buttons["drawAgain"].frame.maxY, window.maxY - 10)
+        XCTAssertTrue(window.contains(app.images["finishedImage"].frame))
+        screenshot("Result Insets")
+    }
+
     func testDraftSurvivesTermination() {
         startClassic()
         draw()

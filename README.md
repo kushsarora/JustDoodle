@@ -4,13 +4,14 @@ Just Doodle is a SwiftUI iOS app for turning one imperfect line into something u
 
 ## Core Flow
 
-- Fade from a handwritten "The Doodler's Club" splash into the home screen.
+- Fade from "The Doodler's Club" into a stitched sketchbook cover with a handwritten masthead and ink-on-paper entrance.
 - Tap Start drawing to reveal a smoothly generated scribble.
 - Draw in the three-minute Classic Mode with one black pen and no eraser or undo.
 - Tap the hand-drawn Idea Box whenever inspiration runs dry for a fresh one-word prompt.
 - Tap the visible Done button to finish early, or save automatically when time expires.
 - Recover an unfinished drawing after relaunch. The timer includes background time.
-- Browse completed drawings in a date-ordered local Doodle Book.
+- Start another round with the same rules directly from the saved result.
+- Browse completed drawings in a date-ordered local Doodle Book, searchable by challenge, idea, or displayed date.
 - Save finished work to Photos or share it with a social-ready caption.
 
 ## Challenge Mode
@@ -24,7 +25,7 @@ Just Doodle is a SwiftUI iOS app for turning one imperfect line into something u
 
 Music services, public feeds, and artist collaborations are intentionally outside the local-first build. Soundtrack Sketch lets people bring their own music without requiring accounts, tracking, or licensed partner content.
 
-The opening uses Apple's built-in Noteworthy face as a temporary handwritten font. A custom Just Doodle typeface can replace it later without changing the screen flow.
+The interface uses Apple's built-in Noteworthy face, hand-drawn contours, blue ink accents, and a yellow Idea Box. Brief spring transitions, selected-pen feedback, and a drawn countdown ring respect Reduce Motion. Only the artwork surface is ruled, so page margins remain aligned across screen sizes and exports.
 
 The app icon carries the same ruled-paper, red-margin, handwritten signature used throughout the game.
 
