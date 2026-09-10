@@ -43,8 +43,8 @@ The initial UI runs exposed test assumptions about PencilKit's accessibility typ
 2. Host `Website/privacy.html` and `Website/support.html` on public HTTPS URLs. Set `JUST_DOODLE_PRIVACY_URL` for the signed archive and enter both URLs in App Store Connect. The supplied support address is `kushsarora@gmail.com`.
 3. Verify physical-device finger/Apple Pencil feel, time-up vibration, interruptions, and long sessions through TestFlight. Test the oldest supported iOS version as well as the current release; the local runtime only covers iOS 26.3.1.
 4. Confirm listing ownership, age-rating/privacy answers, export compliance, pricing, territories, and the next unused build number. Capture store screenshots using real finished artwork at Apple's required sizes.
-5. Run the CI workflow after pushing; the hosted GitHub job has not run for these unpushed changes. Validate and upload the signed archive through Xcode Organizer, then obtain App Review approval.
+5. Review the hosted CI results after pushing; the local verification above does not establish hosted CI success. Validate and upload the signed archive through Xcode Organizer, then obtain App Review approval.
 
 ## GitHub
 
-The pre-overhaul changes were committed locally as `ff4523d`. The requested push was rejected with HTTP 403: "Your account is suspended." GitHub Support must resolve the account restriction before publishing these commits. No remote branch was updated, no App Store record was changed, and no release was submitted.
+The pre-overhaul changes (`ff4523d`) and verified UI overhaul (`4f4362c`) were pushed to `kushsarora/JustDoodle` on September 10. The initial suspension error came from a different active GitHub account, not the verified `kushsarora` identity. Switching to the intended account resolved authentication; retrying with HTTP/1.1 and a buffered upload resolved a subsequent transport error. No App Store record was changed and no release was submitted.
