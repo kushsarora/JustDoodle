@@ -22,6 +22,15 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>JustDoodlePrivacyURL</key>
+	<string>$(JUST_DOODLE_PRIVACY_URL)</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Just Doodle saves finished drawings to your photo library when you choose Save.</string>
 	<key>UILaunchScreen</key>

@@ -1,0 +1,31 @@
+name: iOS Release Checks
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: macos-15
+    timeout-minutes: 40
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select installed iPhone simulator
+        run: |
+          xcodebuild -version
+          destination=$(xcrun simctl list devices available --json | ruby -rjson -e 'devices = JSON.parse(STDIN.read)["devices"].values.flatten; device = devices.find { |d| d["name"].start_with?("iPhone") }; abort "No iPhone simulator installed" unless device; puts "platform=iOS Simulator,id=#{device["udid"]}"')
+          echo "TEST_DESTINATION=$destination" >> "$GITHUB_ENV"
+      - name: Tests and unsigned release archive
+        env:
+          RESULTS_DIR: ${{ runner.temp }}/JustDoodleResults
+        run: bash scripts/check.sh "$TEST_DESTINATION"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iOS-test-results
+          path: ${{ runner.temp }}/JustDoodleResults/Tests.xcresult
+          retention-days: 14

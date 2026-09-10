@@ -7,12 +7,40 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E00000000000000000000100 = {isa = PBXBuildFile; fileRef = E00000000000000000000200; };
+		E00000000000000000000101 = {isa = PBXBuildFile; fileRef = E00000000000000000000201; };
+		D00000000000000000000100 /* DoodleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000200 /* DoodleViews.swift */; };
+		D00000000000000000000101 /* DrawingCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000201 /* DrawingCanvas.swift */; };
+		D00000000000000000000102 /* NotebookStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000202 /* NotebookStyle.swift */; };
+		D00000000000000000000103 /* DoodleModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000203 /* DoodleModels.swift */; };
+		D00000000000000000000104 /* DoodleArchiveStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000204 /* DoodleArchiveStore.swift */; };
+		D00000000000000000000105 /* ArchivePreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000205 /* ArchivePreviewView.swift */; };
+		D00000000000000000000106 /* Sharing.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000206 /* Sharing.swift */; };
+		D00000000000000000000107 /* DoodleRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000207 /* DoodleRenderer.swift */; };
+		D00000000000000000000108 /* DoodleGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000208 /* DoodleGame.swift */; };
+		D00000000000000000000109 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000209 /* SettingsView.swift */; };
+		D00000000000000000000120 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000220 /* PrivacyInfo.xcprivacy */; };
 		7A3D8C122C3F001100D00D1E /* JustDoodleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A3D8C102C3F001100D00D1E /* JustDoodleApp.swift */; };
 		7A3D8C132C3F001100D00D1E /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A3D8C112C3F001100D00D1E /* ContentView.swift */; };
 		7A3D8C172C3F001100D00D1E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7A3D8C162C3F001100D00D1E /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		E00000000000000000000200 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoodleTests.swift; sourceTree = "<group>"; };
+		E00000000000000000000210 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DoodleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E00000000000000000000201 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoodleUITests.swift; sourceTree = "<group>"; };
+		E00000000000000000000211 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DoodleUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D00000000000000000000200 /* DoodleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoodleViews.swift; sourceTree = "<group>"; };
+		D00000000000000000000201 /* DrawingCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawingCanvas.swift; sourceTree = "<group>"; };
+		D00000000000000000000202 /* NotebookStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookStyle.swift; sourceTree = "<group>"; };
+		D00000000000000000000203 /* DoodleModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoodleModels.swift; sourceTree = "<group>"; };
+		D00000000000000000000204 /* DoodleArchiveStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoodleArchiveStore.swift; sourceTree = "<group>"; };
+		D00000000000000000000205 /* ArchivePreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchivePreviewView.swift; sourceTree = "<group>"; };
+		D00000000000000000000206 /* Sharing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sharing.swift; sourceTree = "<group>"; };
+		D00000000000000000000207 /* DoodleRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoodleRenderer.swift; sourceTree = "<group>"; };
+		D00000000000000000000208 /* DoodleGame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoodleGame.swift; sourceTree = "<group>"; };
+		D00000000000000000000209 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		D00000000000000000000220 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		7A3D8C0C2C3F001100D00D1E /* JustDoodle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JustDoodle.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A3D8C102C3F001100D00D1E /* JustDoodleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustDoodleApp.swift; sourceTree = "<group>"; };
 		7A3D8C112C3F001100D00D1E /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -36,6 +64,8 @@
 			children = (
 				7A3D8C0F2C3F001100D00D1E /* JustDoodle */,
 				7A3D8C0D2C3F001100D00D1E /* Products */,
+				E00000000000000000000300,
+				E00000000000000000000301,
 			);
 			sourceTree = "<group>";
 		};
@@ -43,6 +73,8 @@
 			isa = PBXGroup;
 			children = (
 				7A3D8C0C2C3F001100D00D1E /* JustDoodle.app */,
+				E00000000000000000000210,
+				E00000000000000000000211,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -52,6 +84,17 @@
 			children = (
 				7A3D8C102C3F001100D00D1E /* JustDoodleApp.swift */,
 				7A3D8C112C3F001100D00D1E /* ContentView.swift */,
+				D00000000000000000000200 /* DoodleViews.swift */,
+				D00000000000000000000201 /* DrawingCanvas.swift */,
+				D00000000000000000000202 /* NotebookStyle.swift */,
+				D00000000000000000000203 /* DoodleModels.swift */,
+				D00000000000000000000204 /* DoodleArchiveStore.swift */,
+				D00000000000000000000205 /* ArchivePreviewView.swift */,
+				D00000000000000000000206 /* Sharing.swift */,
+				D00000000000000000000207 /* DoodleRenderer.swift */,
+				D00000000000000000000208 /* DoodleGame.swift */,
+				D00000000000000000000209 /* SettingsView.swift */,
+				D00000000000000000000220 /* PrivacyInfo.xcprivacy */,
 				7A3D8C142C3F001100D00D1E /* Info.plist */,
 				7A3D8C162C3F001100D00D1E /* Assets.xcassets */,
 			);
@@ -59,8 +102,12 @@
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
+		E00000000000000000000300 = {isa = PBXGroup; children = (E00000000000000000000200,); path = Tests; sourceTree = "<group>"; };
+		E00000000000000000000301 = {isa = PBXGroup; children = (E00000000000000000000201,); path = UITests; sourceTree = "<group>"; };
 
 /* Begin PBXNativeTarget section */
+		E00000000000000000000400 = {isa = PBXNativeTarget; buildConfigurationList = E00000000000000000000700; buildPhases = (E00000000000000000000500, E00000000000000000000510,); buildRules = (); dependencies = (E00000000000000000000800,); name = DoodleTests; productName = DoodleTests; productReference = E00000000000000000000210; productType = "com.apple.product-type.bundle.unit-test"; };
+		E00000000000000000000401 = {isa = PBXNativeTarget; buildConfigurationList = E00000000000000000000701; buildPhases = (E00000000000000000000501, E00000000000000000000511,); buildRules = (); dependencies = (E00000000000000000000801,); name = DoodleUITests; productName = DoodleUITests; productReference = E00000000000000000000211; productType = "com.apple.product-type.bundle.ui-testing"; };
 		7A3D8C0B2C3F001100D00D1E /* JustDoodle */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 7A3D8C1F2C3F001100D00D1E /* Build configuration list for PBXNativeTarget "JustDoodle" */;
@@ -107,6 +154,8 @@
 			projectRoot = "";
 			targets = (
 				7A3D8C0B2C3F001100D00D1E /* JustDoodle */,
+				E00000000000000000000400,
+				E00000000000000000000401,
 			);
 		};
 /* End PBXProject section */
@@ -117,24 +166,43 @@
 			buildActionMask = 2147483647;
 			files = (
 				7A3D8C172C3F001100D00D1E /* Assets.xcassets in Resources */,
+				D00000000000000000000120 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		E00000000000000000000500 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (E00000000000000000000100,); runOnlyForDeploymentPostprocessing = 0; };
+		E00000000000000000000510 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		E00000000000000000000501 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (E00000000000000000000101,); runOnlyForDeploymentPostprocessing = 0; };
+		E00000000000000000000511 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		7A3D8C082C3F001100D00D1E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				7A3D8C122C3F001100D00D1E /* JustDoodleApp.swift in Sources */,
 				7A3D8C132C3F001100D00D1E /* ContentView.swift in Sources */,
+				D00000000000000000000100 /* DoodleViews.swift in Sources */,
+				D00000000000000000000101 /* DrawingCanvas.swift in Sources */,
+				D00000000000000000000102 /* NotebookStyle.swift in Sources */,
+				D00000000000000000000103 /* DoodleModels.swift in Sources */,
+				D00000000000000000000104 /* DoodleArchiveStore.swift in Sources */,
+				D00000000000000000000105 /* ArchivePreviewView.swift in Sources */,
+				D00000000000000000000106 /* Sharing.swift in Sources */,
+				D00000000000000000000107 /* DoodleRenderer.swift in Sources */,
+				D00000000000000000000108 /* DoodleGame.swift in Sources */,
+				D00000000000000000000109 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		E00000000000000000000600 = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 16.0; PRODUCT_BUNDLE_IDENTIFIER = com.kusharora.JustDoodle.DoodleTests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; BUNDLE_LOADER = "$(TEST_HOST)"; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JustDoodle.app/JustDoodle"; }; name = Debug; };
+		E00000000000000000000601 = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 16.0; PRODUCT_BUNDLE_IDENTIFIER = com.kusharora.JustDoodle.DoodleTests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; BUNDLE_LOADER = "$(TEST_HOST)"; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JustDoodle.app/JustDoodle"; }; name = Release; };
+		E00000000000000000000610 = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 16.0; PRODUCT_BUNDLE_IDENTIFIER = com.kusharora.JustDoodle.DoodleUITests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; TEST_TARGET_NAME = JustDoodle; }; name = Debug; };
+		E00000000000000000000611 = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 16.0; PRODUCT_BUNDLE_IDENTIFIER = com.kusharora.JustDoodle.DoodleUITests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; TEST_TARGET_NAME = JustDoodle; }; name = Release; };
 		7A3D8C1B2C3F001100D00D1E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -308,6 +376,12 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		E00000000000000000000700 = {isa = XCConfigurationList; buildConfigurations = (E00000000000000000000600, E00000000000000000000601,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		E00000000000000000000800 = {isa = PBXTargetDependency; target = 7A3D8C0B2C3F001100D00D1E; targetProxy = E00000000000000000000810; };
+		E00000000000000000000810 = {isa = PBXContainerItemProxy; containerPortal = 7A3D8C042C3F001100D00D1E; proxyType = 1; remoteGlobalIDString = 7A3D8C0B2C3F001100D00D1E; remoteInfo = JustDoodle; };
+		E00000000000000000000701 = {isa = XCConfigurationList; buildConfigurations = (E00000000000000000000610, E00000000000000000000611,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		E00000000000000000000801 = {isa = PBXTargetDependency; target = 7A3D8C0B2C3F001100D00D1E; targetProxy = E00000000000000000000811; };
+		E00000000000000000000811 = {isa = PBXContainerItemProxy; containerPortal = 7A3D8C042C3F001100D00D1E; proxyType = 1; remoteGlobalIDString = 7A3D8C0B2C3F001100D00D1E; remoteInfo = JustDoodle; };
 		7A3D8C072C3F001100D00D1E /* Build configuration list for PBXProject "JustDoodle" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
