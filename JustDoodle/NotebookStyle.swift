@@ -107,21 +107,22 @@ struct HandCircle: Shape {
     }
 }
 
-struct SketchbookBinding: View {
-    var body: some View {
-        Canvas { context, size in
-            var spine = Path()
-            spine.move(to: CGPoint(x: 22, y: 0))
-            spine.addLine(to: CGPoint(x: 22, y: size.height))
-            context.stroke(spine, with: .color(Ink.red.opacity(0.35)), lineWidth: 1)
-            for y in stride(from: CGFloat(30), to: size.height, by: 38) {
-                var stitch = Path()
-                stitch.move(to: CGPoint(x: 4, y: y + 5))
-                stitch.addQuadCurve(to: CGPoint(x: 22, y: y), control: CGPoint(x: 8, y: y - 10))
-                context.stroke(stitch, with: .color(Ink.black.opacity(0.35)), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
-            }
-        }
-        .allowsHitTesting(false).accessibilityHidden(true)
+struct SketchWindowOutline: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: 3, y: 27))
+        path.addQuadCurve(to: CGPoint(x: 27, y: 3), control: CGPoint(x: 2, y: 3))
+        path.addQuadCurve(to: CGPoint(x: rect.maxX - 24, y: 5), control: CGPoint(x: rect.midX, y: 0))
+        path.addQuadCurve(to: CGPoint(x: rect.maxX - 4, y: 27), control: CGPoint(x: rect.maxX - 3, y: 4))
+        path.addLine(to: CGPoint(x: rect.maxX - 2, y: rect.maxY - 5))
+        path.addQuadCurve(to: CGPoint(x: 5, y: rect.maxY - 3), control: CGPoint(x: rect.midX, y: rect.maxY - 1))
+        path.closeSubpath()
+        // A second short pen pass keeps the frame deliberately imperfect.
+        path.move(to: CGPoint(x: 9, y: 72))
+        path.addLine(to: CGPoint(x: 10, y: rect.maxY - 17))
+        path.move(to: CGPoint(x: 22, y: rect.maxY - 10))
+        path.addLine(to: CGPoint(x: rect.maxX * 0.52, y: rect.maxY - 9))
+        return path
     }
 }
 

@@ -4,7 +4,7 @@ Just Doodle is a SwiftUI iOS app for turning one imperfect line into something u
 
 ## Core Flow
 
-- Fade from "The Doodler's Club" into a stitched sketchbook cover with a handwritten masthead and ink-on-paper entrance.
+- Fade from "The Doodler's Club" into a hand-inked app window with a signature masthead and animated scribble.
 - Tap Start drawing to reveal a smoothly generated scribble.
 - Draw in the three-minute Classic Mode with one black pen and no eraser or undo.
 - Tap the hand-drawn Idea Box whenever inspiration runs dry for a fresh one-word prompt.
@@ -25,7 +25,7 @@ Just Doodle is a SwiftUI iOS app for turning one imperfect line into something u
 
 Music services, public feeds, and artist collaborations are intentionally outside the local-first build. Soundtrack Sketch lets people bring their own music without requiring accounts, tracking, or licensed partner content.
 
-The interface uses Apple's built-in Noteworthy face, hand-drawn contours, blue ink accents, and a yellow Idea Box. Brief spring transitions, selected-pen feedback, and a drawn countdown ring respect Reduce Motion. Only the artwork surface is ruled, so page margins remain aligned across screen sizes and exports.
+The interface uses Apple's built-in Noteworthy face, double-stroked window borders, blue ink accents, and a yellow Idea Box. The home screen keeps drawing, the Doodle Book, challenges, and settings directly accessible. Brief spring transitions, selected-pen feedback, and a drawn countdown ring respect Reduce Motion. Only the artwork surface is ruled, so page margins remain aligned across screen sizes and exports.
 
 The app icon carries the same ruled-paper, red-margin, handwritten signature used throughout the game.
 

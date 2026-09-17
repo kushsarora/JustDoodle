@@ -302,19 +302,20 @@ struct StartDot: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 12) {
-                ZStack {
-                    HandCircle().stroke(Ink.blue, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
-                        .frame(width: 102, height: 96).rotationEffect(.degrees(-12))
-                    HandCircle().fill(Ink.black).frame(width: 78, height: 74)
-                    Image(systemName: "pencil").font(.system(size: 28, weight: .medium))
-                        .foregroundStyle(.white)
+            VStack(spacing: 8) {
+                HStack(spacing: 12) {
+                    Image(systemName: "pencil").font(.system(size: 22, weight: .medium))
+                    Text("Start drawing").font(.doodleTitle(24)).lineLimit(1).minimumScaleFactor(0.65)
+                    Spacer(minLength: 0)
+                    Image(systemName: "arrow.right").font(.system(size: 19, weight: .medium))
                 }
-                Text("Start drawing").font(.doodleTitle(28)).foregroundStyle(Ink.black)
-                Text("Classic · 3 minutes").font(.doodleBody(17)).foregroundStyle(Ink.blue)
+                .foregroundStyle(.white).padding(.horizontal, 24).padding(.vertical, 14)
+                .frame(maxWidth: .infinity, minHeight: 60)
+                .background(HandDrawnBox().fill(Ink.black))
+                .overlay { HandDrawnBox().stroke(Ink.black, lineWidth: 1).padding(-3) }
+                Text("Classic / 3 min").font(.doodleBody(16)).foregroundStyle(Ink.black.opacity(0.65))
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
             .contentShape(Rectangle())
         }
         .buttonStyle(InkPressStyle())
@@ -376,28 +377,67 @@ struct HomeMasthead: View {
     @State private var signed = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top) {
-                Text("Just\nDoodle.")
-                    .font(.doodleTitle(52)).lineSpacing(-2)
-                    .lineLimit(2).minimumScaleFactor(0.65)
-                    .foregroundStyle(Ink.black)
-                Spacer(minLength: 0)
-                Image("DoodlersClubMark").resizable().scaledToFit()
-                    .frame(width: 66, height: 66)
-                    .rotationEffect(.degrees(signed ? 9 : 0))
-                    .padding(.top, 16).accessibilityHidden(true)
-            }
+        VStack(spacing: 0) {
+            Text("Just Doodle.")
+                .font(.doodleTitle(43)).lineLimit(1).minimumScaleFactor(0.55)
+                .foregroundStyle(Ink.black)
             HandUnderline().trim(from: 0, to: signed ? 1 : 0)
-                .stroke(Ink.blue, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                .frame(height: 10).padding(.trailing, 70)
-            Text("The Doodler's Club").font(.doodleBody(18))
-                .foregroundStyle(Ink.blue).padding(.top, 6)
+                .stroke(Ink.blue, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .frame(width: 176, height: 8)
         }
         .dynamicTypeSize(...DynamicTypeSize.accessibility1)
         .onAppear {
             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.7).delay(0.15)) { signed = true }
         }
+    }
+}
+
+struct HomeInkStudy: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var progress: CGFloat = 0
+    private let study = Scribble(id: "home-study", points: [
+        CGPoint(x: 0.10, y: 0.70), CGPoint(x: 0.24, y: 0.08),
+        CGPoint(x: 0.53, y: 0.14), CGPoint(x: 0.69, y: 0.82),
+        CGPoint(x: 0.41, y: 0.93), CGPoint(x: 0.36, y: 0.27),
+        CGPoint(x: 0.68, y: 0.20), CGPoint(x: 0.88, y: 0.45)
+    ])
+
+    var body: some View {
+        ScribbleInk(scribble: study, progress: progress)
+            .padding(12).frame(maxWidth: 260)
+            .accessibilityHidden(true).allowsHitTesting(false)
+            .onAppear {
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 1.0).delay(0.15)) { progress = 1 }
+            }
+    }
+}
+
+struct HomeNavigationRow: View {
+    let title: String
+    let symbol: String
+    let detail: String?
+    let accent: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: symbol).font(.system(size: 26, weight: .regular))
+                    .frame(width: 42, height: 44)
+                    .background(HandCircle().fill(accent.opacity(0.22)).frame(width: 35, height: 31).offset(x: 3, y: 3))
+                Text(title).font(.doodleTitle(21)).lineLimit(1).minimumScaleFactor(0.65)
+                Spacer(minLength: 4)
+                if let detail {
+                    Text(detail).font(.doodleBody(17)).lineLimit(1).minimumScaleFactor(0.65)
+                        .frame(width: 34).accessibilityLabel("\(detail) saved drawings")
+                }
+                Image(systemName: "chevron.right").font(.system(size: 15, weight: .medium))
+            }
+            .foregroundStyle(Ink.black).padding(.vertical, 6).padding(.horizontal, 4)
+            .frame(maxWidth: .infinity, minHeight: 56).contentShape(Rectangle())
+            .overlay(alignment: .top) { HandUnderline().stroke(Ink.black, lineWidth: 1.3).frame(height: 4) }
+        }
+        .buttonStyle(InkPressStyle())
     }
 }
 

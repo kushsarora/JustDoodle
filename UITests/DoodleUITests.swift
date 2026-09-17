@@ -62,6 +62,24 @@ final class DoodleUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Nothing here yet."].waitForExistence(timeout: 5))
     }
 
+    func testHomeNavigationFitsWindow() {
+        let window = app.windows.firstMatch.frame
+        for identifier in ["startClassic", "doodleBook", "challenges", "settings"] {
+            let control = app.buttons[identifier]
+            XCTAssertTrue(control.isHittable, identifier)
+            XCTAssertTrue(window.contains(control.frame), identifier)
+        }
+        screenshot("Ink Window Home")
+        app.buttons["doodleBook"].tap()
+        XCTAssertTrue(app.staticTexts["Nothing here yet."].waitForExistence(timeout: 5))
+        app.buttons["Back to home"].tap()
+        app.buttons["challenges"].tap()
+        XCTAssertTrue(app.buttons["challenge-build-it"].waitForExistence(timeout: 5))
+        app.buttons["Back to home"].tap()
+        app.buttons["settings"].tap()
+        XCTAssertTrue(app.switches["hapticsToggle"].waitForExistence(timeout: 5))
+    }
+
     func testChallengePaletteAndRepeatedIdeas() {
         app.buttons["challenges"].tap()
         screenshot("Challenges")
@@ -230,6 +248,7 @@ final class DoodleUITests: XCTestCase {
         app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         app.launch()
         XCTAssertTrue(app.buttons["startClassic"].waitForExistence(timeout: 10))
+        screenshot("Large Text Home")
         app.swipeUp()
         startClassic()
         draw()

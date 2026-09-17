@@ -1,6 +1,18 @@
 # Release Candidate Review
 
-UI and simulator verification completed September 9, 2026; release packaging resumed September 10. This is a local release candidate for owner playtesting, not an App Store submission.
+Core release-candidate verification completed September 9, 2026; release packaging resumed September 10. A subsequent home-screen design iteration is documented below. Nothing has been submitted to the App Store.
+
+## Home Screen Iteration
+
+The September 10-11 home redesign follows the owner's hand-drawn window reference: a double-stroked frame, compact club title bar, animated scribble, bold Start drawing control, and direct Doodle Book/Challenges rows. Resume, discard, settings, and saved-page counts remain connected to the existing game state. Other game screens and rules are unchanged.
+
+The final simulator test build succeeded. `JustDoodle-InkWindow-Compact.xcresult` contains five passing UI tests covering home navigation and bounds, Classic save/delete, challenges, draft recovery, and large text on iPhone SE. Normal and large-text home screenshots were visually inspected and saved in `ReviewScreenshots/`. The initial iPhone runner was killed before connecting to the app; `JustDoodle-InkWindow-iPhone.xcresult` is not a passing report.
+
+Visual review on iPad exposed excessive spacing between Start and navigation. The content now stays grouped and vertically centered. After that adjustment, `JustDoodle-InkWindow-iPad-Final-Verified.xcresult` passed the home navigation/bounds test on iPad Pro 13-inch; its screenshot was inspected and saved as `ReviewScreenshots/iPad-Home.png`.
+
+`JustDoodle-InkWindow-Compact-Final.xcresult` then passed both final iPhone SE checks: home navigation/bounds and large-text home-to-drawing controls. Updated normal and large-text screenshots were inspected with no clipped labels or overlapping controls. Together with the five earlier workflow tests, these verify the home iteration; they do not replace physical-device release testing.
+
+This home iteration is local for design review and is not included in the earlier Release archive below. Rebuild the archive after the owner approves the design.
 
 ## Changes
 
@@ -30,7 +42,7 @@ Results are kept in native xcresult bundles under `/private/tmp/`. These are loc
 - These completed runs supersede the interrupted September 8 verification attempts. The old incomplete result bundle and archive are not release evidence.
 
 - Xcode 26.3, build 17C529; SDK iOS 26.2; simulator runtime iOS 26.3.1.
-- The current unsigned arm64 Release archive built successfully at `/private/tmp/JustDoodle-September10-Release.xcarchive`. Structural validation passed: device SDK, executable architecture, packaged privacy manifest, and asset catalog. The older September 6 archive predates this UI overhaul and must not be used for the current release.
+- The pre-home-redesign unsigned arm64 Release archive built successfully at `/private/tmp/JustDoodle-September10-Release.xcarchive`. Structural validation passed: device SDK, executable architecture, packaged privacy manifest, and asset catalog. The older September 6 archive predates this UI overhaul and must not be used for the current release.
 - The submission gate correctly rejects the current archive because `JUST_DOODLE_PRIVACY_URL` is not configured with a published HTTPS policy. This is expected, not a successful submission validation; distribution signing is also still required.
 - The source App Store icon is 1024 x 1024 with no alpha channel. The hosted privacy URL and distribution signing remain unconfigured.
 - Shell syntax, project/plist validation, workflow YAML parsing, and `git diff --check` passed.

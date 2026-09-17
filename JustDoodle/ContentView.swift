@@ -83,70 +83,66 @@ struct ContentView: View {
     }
 
     private var homeView: some View {
-        VStack(spacing: 0) {
-            HStack {
-                IconButton(systemName: "gearshape", label: "Settings") { game.screen = .settings }
-                    .accessibilityIdentifier("settings")
-                Spacer()
-                Button { game.screen = .archive } label: {
-                    Label("Doodle Book", systemImage: "square.grid.2x2")
-                        .font(.doodleTitle(18))
-                        .foregroundStyle(Ink.black)
+        GeometryReader { bounds in
+            VStack(spacing: 0) {
+                HStack(spacing: 10) {
+                    Image("DoodlersClubMark").resizable().scaledToFit()
+                        .frame(width: 28, height: 28).accessibilityHidden(true)
+                    Text("The Doodler's Club").font(.doodleTitle(16))
                         .lineLimit(1).minimumScaleFactor(0.7)
-                        .frame(minHeight: 44)
+                    Spacer(minLength: 0)
+                    IconButton(systemName: "gearshape", label: "Settings") { game.screen = .settings }
+                        .accessibilityIdentifier("settings")
                 }
-                .accessibilityIdentifier("doodleBook")
-            }
-            .padding(.horizontal, 20)
+                .padding(.leading, 18).padding(.trailing, 8).padding(.top, 8)
+                .overlay(alignment: .bottom) {
+                    HandUnderline().stroke(Ink.black, lineWidth: 2).frame(height: 4)
+                }
 
-            ScrollView {
-                VStack(spacing: 26) {
-                    HomeMasthead().modifier(InkArrival())
-                    if let error = game.recoveryError ?? archive.loadError {
-                        Text(error).font(.body).foregroundStyle(Ink.red)
-                        Link("Contact support", destination: ReleaseInfo.supportMailURL)
-                    } else if game.draft != nil {
-                        Button { game.resume() } label: {
-                            Label("Resume drawing", systemImage: "play.fill")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(InkCommandStyle())
-                        .accessibilityIdentifier("resumeDrawing")
-                        Button("Discard unfinished drawing", role: .destructive) { confirmDiscard = true }
-                            .frame(minHeight: 44)
-                    } else {
-                        StartDot { game.begin(.classic, reduceMotion: reduceMotion) }
-                            .disabled(!game.canBegin)
-                            .modifier(InkArrival(delay: 0.12))
-                        Button { game.screen = .challenges } label: {
-                            HStack(spacing: 14) {
-                                Image(systemName: "sparkles").foregroundStyle(Ink.blue)
-                                Text("Challenges").font(.doodleTitle(22))
-                                Spacer(minLength: 8)
-                                Image(systemName: "arrow.right")
+                ScrollView {
+                    VStack(spacing: 12) {
+                        HomeMasthead().padding(.top, 8)
+                        HomeInkStudy().frame(height: bounds.size.height < 700 ? 90 : 136)
+                        if let error = game.recoveryError ?? archive.loadError {
+                            Text(error).font(.body).foregroundStyle(Ink.red)
+                            Link("Contact support", destination: ReleaseInfo.supportMailURL)
+                        } else if game.draft != nil {
+                            Button { game.resume() } label: {
+                                Label("Resume drawing", systemImage: "play.fill")
+                                    .frame(maxWidth: .infinity)
                             }
-                            .foregroundStyle(Ink.black)
-                            .padding(.vertical, 18)
-                            .contentShape(Rectangle())
-                            .overlay(alignment: .top) { HandUnderline().stroke(Ink.black.opacity(0.2), lineWidth: 1).frame(height: 4) }
-                            .overlay(alignment: .bottom) { HandUnderline().stroke(Ink.black.opacity(0.2), lineWidth: 1).frame(height: 4) }
+                            .buttonStyle(InkCommandStyle())
+                            .accessibilityIdentifier("resumeDrawing")
+                            Button("Discard unfinished drawing", role: .destructive) { confirmDiscard = true }
+                                .frame(minHeight: 44)
+                        } else {
+                            StartDot { game.begin(.classic, reduceMotion: reduceMotion) }
+                                .disabled(!game.canBegin)
                         }
-                        .buttonStyle(InkPressStyle())
-                        .disabled(!game.canBegin)
-                        .accessibilityIdentifier("challenges")
-                        .modifier(InkArrival(delay: 0.2))
+                        VStack(spacing: 0) {
+                            HomeNavigationRow(title: "Doodle Book", symbol: "folder", detail: "\(archive.records.count)", accent: .yellow) {
+                                game.screen = .archive
+                            }
+                            .accessibilityIdentifier("doodleBook")
+                            HomeNavigationRow(title: "Challenges", symbol: "bolt", detail: nil, accent: Ink.blue) {
+                                game.screen = .challenges
+                            }
+                            .disabled(!game.canBegin)
+                            .accessibilityIdentifier("challenges")
+                        }
                     }
-                    Text(archive.records.count == 1 ? "1 page in your book" : "\(archive.records.count) pages in your book")
-                        .font(.doodleBody(15)).foregroundStyle(.secondary)
+                    .frame(maxWidth: 440)
+                    .padding(.horizontal, 22).padding(.bottom, 18)
+                    .frame(minHeight: max(0, bounds.size.height - 92))
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: 420)
-                .padding(.horizontal, 36)
-                .padding(.top, 12)
-                .padding(.bottom, 30)
-                .frame(maxWidth: .infinity)
             }
+            .foregroundStyle(Ink.black)
+            .background(NotebookColors.paper)
+            .overlay { SketchWindowOutline().stroke(Ink.black, style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round)).allowsHitTesting(false) }
+            .padding(.horizontal, 12).padding(.vertical, 10)
         }
-        .background(SketchbookBinding())
+        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
     }
 
     private var drawingView: some View {
