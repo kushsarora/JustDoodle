@@ -28,6 +28,14 @@ A final layout-hardening pass explicitly sizes result and saved-preview artwork 
 
 `JustDoodle-September19-iPad-Sizing.xcresult` also passed the strengthened result-bounds test on the final layout. These checks complete the simulator UI verification for this iteration. Physical-device and TestFlight verification remain release gates.
 
+### September 20 Handoff
+
+The complete app-wide design, layout hardening, regression tests, and review captures were committed and pushed to `master` as `7a7b17c`. The worktree was clean after that push.
+
+The final unsigned arm64 Release archive built successfully at `/private/tmp/JustDoodle-September20-Release.xcarchive`. `scripts/validate-archive.sh` passed its structural checks: physical-device SDK, arm64 executable, packaged privacy manifest, asset catalog, bundle identifier, and version. This archive supersedes the September 10 and September 19 archives, which predate the final layout hardening. Local archives and xcresult bundles are temporary verification artifacts, not files uploaded to GitHub or App Store Connect.
+
+The [GitHub verification run for the app-wide redesign](https://github.com/kushsarora/JustDoodle/actions/runs/35548702092) was in progress at handoff; hosted success is not claimed. The earlier home-design run passed. Signing, hosted support/privacy URLs, owner metadata, physical-device/TestFlight verification, and submission remain the owner's next release steps in `RELEASE.md`. No Apple submission or account configuration was performed.
+
 ## Changes
 
 - Replaced the overlapping notebook backgrounds with one ruled drawing page. The timer is centered independently of the side controls.
@@ -72,5 +80,7 @@ The initial UI runs exposed test assumptions about PencilKit's accessibility typ
 5. Review the hosted CI results after pushing; the local verification above does not establish hosted CI success. Validate and upload the signed archive through Xcode Organizer, then obtain App Review approval.
 
 ## GitHub
+
+The approved home design was pushed as `522820a` on September 17. The full app-wide iteration was pushed as `7a7b17c` on September 20, followed by these release-verification notes.
 
 The pre-overhaul changes (`ff4523d`) and verified UI overhaul (`4f4362c`) were pushed to `kushsarora/JustDoodle` on September 10. The initial suspension error came from a different active GitHub account, not the verified `kushsarora` identity. Switching to the intended account resolved authentication; retrying with HTTP/1.1 and a buffered upload resolved a subsequent transport error. No App Store record was changed and no release was submitted.
