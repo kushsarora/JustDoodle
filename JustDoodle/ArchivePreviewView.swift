@@ -14,7 +14,7 @@ struct ArchivePreviewView: View {
     var body: some View {
         ZStack {
             NotebookBackground()
-            VStack(spacing: 12) {
+            VStack(spacing: 10) {
                 HStack(spacing: 8) {
                     IconButton(systemName: "xmark", label: "Close drawing") { dismiss() }
                     Spacer(minLength: 0)
@@ -29,13 +29,13 @@ struct ArchivePreviewView: View {
                         .accessibilityIdentifier("deleteDrawing")
                 }
                 .foregroundStyle(Ink.black)
-                .padding(.horizontal, 16)
+                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+                .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, 8)
+                .overlay(alignment: .bottom) { InkDivider() }
 
                 if let image {
-                    Image(uiImage: image).resizable().scaledToFit()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(.horizontal, 14)
-                        .accessibilityLabel("Saved drawing")
+                    DoodleArtworkPreview(image: image, label: "Saved drawing")
+                        .padding(.horizontal, 18)
                     HStack(spacing: 24) {
                         PhotoExportButton(image: image)
                         IconButton(systemName: "square.and.arrow.up", label: "Share drawing") {
@@ -43,6 +43,9 @@ struct ArchivePreviewView: View {
                         }
                         .accessibilityIdentifier("shareDrawing")
                     }
+                    .frame(maxWidth: 420).padding(.top, 8)
+                    .overlay(alignment: .top) { InkDivider() }
+                    .padding(.horizontal, 24)
                 } else {
                     Spacer()
                     if loaded {
@@ -53,7 +56,8 @@ struct ArchivePreviewView: View {
                 }
                 if deleting { ProgressView("Deleting...") }
             }
-            .padding(.vertical, 12)
+            .padding(.bottom, 16)
+            .modifier(InkWindow())
         }
         .preferredColorScheme(.light)
         .task {

@@ -40,6 +40,7 @@ final class DoodleUITests: XCTestCase {
     }
 
     func testClassicFinishAndDeleteFromBook() {
+        let headerTop = app.buttons["settings"].frame.minY
         screenshot("Home")
         startClassic()
         draw()
@@ -57,6 +58,9 @@ final class DoodleUITests: XCTestCase {
         XCTAssertTrue(record.waitForExistence(timeout: 5))
         screenshot("Doodle Book")
         record.tap()
+        XCTAssertTrue(app.buttons["deleteDrawing"].waitForExistence(timeout: 5))
+        XCTAssertGreaterThanOrEqual(app.buttons["deleteDrawing"].frame.minY, headerTop - 8)
+        screenshot("Saved Drawing Preview")
         app.buttons["deleteDrawing"].tap()
         app.buttons["Delete drawing"].tap()
         XCTAssertTrue(app.staticTexts["Nothing here yet."].waitForExistence(timeout: 5))
@@ -146,6 +150,7 @@ final class DoodleUITests: XCTestCase {
     }
 
     func testResultControlsRespectScreenInsets() {
+        let headerTop = app.buttons["settings"].frame.minY
         startClassic()
         draw()
         app.buttons["finishDrawing"].tap()
@@ -154,7 +159,7 @@ final class DoodleUITests: XCTestCase {
         expectation(for: NSPredicate(format: "label == 'Saved.'"), evaluatedWith: status)
         waitForExpectations(timeout: 10)
         let window = app.windows.firstMatch.frame
-        XCTAssertGreaterThanOrEqual(status.frame.minY, window.minY + 20)
+        XCTAssertGreaterThanOrEqual(status.frame.minY, headerTop - 8)
         XCTAssertLessThanOrEqual(app.buttons["drawAgain"].frame.maxY, window.maxY - 10)
         XCTAssertTrue(window.contains(app.images["finishedImage"].frame))
         screenshot("Result Insets")
@@ -189,9 +194,42 @@ final class DoodleUITests: XCTestCase {
         app.buttons["settings"].tap()
         XCTAssertTrue(app.switches["hapticsToggle"].waitForExistence(timeout: 5))
         app.switches["hapticsToggle"].tap()
+        let vibration = app.switches["hapticsToggle"].value as? String
+        screenshot("Settings")
         app.buttons["Privacy policy"].tap()
         XCTAssertTrue(app.staticTexts["Your drawings belong to you."].waitForExistence(timeout: 5))
         screenshot("Privacy Policy")
+        app.buttons["Back to settings"].tap()
+        XCTAssertEqual(app.switches["hapticsToggle"].value as? String, vibration)
+        app.buttons["Back to home"].tap()
+        XCTAssertTrue(app.buttons["startClassic"].waitForExistence(timeout: 5))
+    }
+
+    func testLargeTextSecondaryPagesAndEmptyBookStart() {
+        app.terminate()
+        app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+        XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 10))
+        app.buttons["settings"].tap()
+        XCTAssertTrue(app.switches["hapticsToggle"].isHittable)
+        XCTAssertTrue(app.buttons["Privacy policy"].isHittable)
+        screenshot("Large Text Settings")
+        app.buttons["Privacy policy"].tap()
+        XCTAssertTrue(app.staticTexts["Your drawings belong to you."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Back to settings"].isHittable)
+        app.buttons["Back to settings"].tap()
+        app.buttons["Back to home"].tap()
+        app.buttons["challenges"].tap()
+        XCTAssertTrue(app.buttons["challenge-build-it"].isHittable)
+        screenshot("Large Text Challenges")
+        app.buttons["Back to home"].tap()
+        app.buttons["doodleBook"].tap()
+        let start = app.buttons["startFromBook"]
+        XCTAssertTrue(start.isHittable)
+        XCTAssertTrue(app.windows.firstMatch.frame.contains(start.frame))
+        screenshot("Empty Doodle Book")
+        start.tap()
+        XCTAssertTrue(app.buttons["finishDrawing"].waitForExistence(timeout: 5))
     }
 
     func testShareSheetOpensAndDismisses() {
@@ -217,14 +255,24 @@ final class DoodleUITests: XCTestCase {
         app.buttons["finishDrawing"].tap()
         XCTAssertTrue(app.buttons["saveToPhotos"].waitForExistence(timeout: 10))
         app.buttons["saveToPhotos"].tap()
-        let permission = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
+        let permission = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts
+            .matching(NSPredicate(format: "label CONTAINS[c] 'Just Doodle' AND label CONTAINS[c] 'Photos'"))
+            .firstMatch
         XCTAssertTrue(permission.waitForExistence(timeout: 10))
         let predicate = allow
             ? NSPredicate(format: "label CONTAINS[c] 'Add' OR label == 'Allow' OR label == 'OK'")
             : NSPredicate(format: "label BEGINSWITH[c] 'Don'")
         let response = permission.buttons.matching(predicate).firstMatch
         XCTAssertTrue(response.exists, permission.debugDescription)
+        // The system permission sheet can expose buttons before its entrance settles.
+        Thread.sleep(forTimeInterval: 0.75)
         response.tap()
+        let dismissed = NSPredicate(format: "exists == false")
+        if XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: dismissed, object: permission)], timeout: 3) != .completed {
+            response.tap()
+        }
+        expectation(for: dismissed, evaluatedWith: permission)
+        waitForExpectations(timeout: 5)
     }
 
     func testPhotosExportAllowed() {
@@ -257,6 +305,9 @@ final class DoodleUITests: XCTestCase {
         screenshot("Large Text Drawing")
         app.buttons["finishDrawing"].tap()
         XCTAssertTrue(app.images["finishedImage"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.windows.firstMatch.frame.contains(app.images["finishedImage"].frame))
+        XCTAssertTrue(app.buttons["drawAgain"].isHittable)
+        screenshot("Large Text Result")
     }
 
     func testIPadRotationKeepsControlsAndArtwork() throws {

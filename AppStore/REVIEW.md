@@ -12,7 +12,21 @@ Visual review on iPad exposed excessive spacing between Start and navigation. Th
 
 `JustDoodle-InkWindow-Compact-Final.xcresult` then passed both final iPhone SE checks: home navigation/bounds and large-text home-to-drawing controls. Updated normal and large-text screenshots were inspected with no clipped labels or overlapping controls. Together with the five earlier workflow tests, these verify the home iteration; they do not replace physical-device release testing.
 
-This home iteration is local for design review and is not included in the earlier Release archive below. Rebuild the archive after the owner approves the design.
+The owner approved the home direction, and this iteration was pushed as `522820a` on September 17. It is not included in the earlier Release archive below.
+
+## App-Wide Ink Window Iteration
+
+The September 17 iteration carries the approved home design across the splash, drawing workspace, results, challenges/custom builder, Doodle Book, saved-drawing preview, settings, and privacy. Shared frame/header/divider components keep spacing consistent. Settings now uses hand-drawn rows with the native vibration switch; privacy has an explicit return path. The empty Doodle Book can begin a Classic drawing directly. System share sheets, Photos permissions, and destructive confirmation dialogs remain native.
+
+The simulator test build passed. `JustDoodle-September17-Compact-Final.xcresult` contains 27 passing unit tests and 14 passing UI tests on iPhone SE, with only the iPad-only rotation test skipped. Coverage includes saving/deleting, replay/search, challenge palettes, recovery, Photos allowed/denied, sharing, home/result bounds, settings/privacy return navigation, and large-text drawing/secondary pages. Final screenshots are in `ReviewScreenshots/`.
+
+The first run exposed a gallery-width regression and permission-dialog test timing failures. The grid now fits two columns on iPhone SE, scroll content stays inside the ink-window border, and the Photos test waits for the system dialog to settle and confirms dismissal. The final passing run supersedes `JustDoodle-September17-Compact.xcresult`, which had three failures. No signing, hosted policy configuration, store metadata, or game rules changed.
+
+`JustDoodle-September19-iPad.xcresult` passed all four selected UI tests on iPad Pro 13-inch: portrait/landscape drawing alignment, large-text secondary pages, result bounds, and share-sheet dismissal. Landscape and large-text settings captures were visually inspected and saved alongside the iPhone captures.
+
+A final layout-hardening pass explicitly sizes result and saved-preview artwork within the space remaining between the header and actions. The safe-area tests now compare result/preview headers with the home header, rather than a fixed 20-point threshold. `JustDoodle-September19-iPhone-Sizing.xcresult` passed four follow-up tests on iPhone 17 Pro (save/delete, large text, result bounds, sharing); `JustDoodle-September19-Compact-Sizing.xcresult` passed three on iPhone SE (save/delete, large text, result bounds). Normal and large-text results were visually inspected at original capture size. The earlier three-test iPhone run also passed, but predates this hardening.
+
+`JustDoodle-September19-iPad-Sizing.xcresult` also passed the strengthened result-bounds test on the final layout. These checks complete the simulator UI verification for this iteration. Physical-device and TestFlight verification remain release gates.
 
 ## Changes
 

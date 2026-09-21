@@ -138,9 +138,7 @@ struct ContentView: View {
                 }
             }
             .foregroundStyle(Ink.black)
-            .background(NotebookColors.paper)
-            .overlay { SketchWindowOutline().stroke(Ink.black, style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round)).allowsHitTesting(false) }
-            .padding(.horizontal, 12).padding(.vertical, 10)
+            .modifier(InkWindow())
         }
         .dynamicTypeSize(...DynamicTypeSize.accessibility1)
     }
@@ -174,7 +172,8 @@ struct ContentView: View {
             }
             .dynamicTypeSize(...DynamicTypeSize.accessibility1)
             .frame(minHeight: 56)
-            .padding(.horizontal, 16).padding(.vertical, 6)
+            .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, 6)
+            .overlay(alignment: .bottom) { InkDivider() }
 
             if game.session.isChallenge {
                 VStack(alignment: .leading, spacing: 2) {
@@ -184,7 +183,7 @@ struct ContentView: View {
                 }
                 .foregroundStyle(Ink.black)
                 .frame(maxWidth: 640, alignment: .leading)
-                .padding(.horizontal, 18).padding(.bottom, 6)
+                .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 2)
                 .accessibilityElement(children: .combine)
                 .dynamicTypeSize(...DynamicTypeSize.accessibility1)
             }
@@ -194,7 +193,7 @@ struct ContentView: View {
                     drawing: $game.drawing,
                     isDrawingEnabled: game.screen == .drawing && game.isActive && !game.isDiscarding,
                     ink: game.selectedInk, bridge: game.canvas)
-                    .padding(.horizontal, 16).padding(.vertical, 10)
+                    .padding(.horizontal, 14).padding(.vertical, 8)
             }
 
             HStack(alignment: .center, spacing: 8) {
@@ -213,9 +212,11 @@ struct ContentView: View {
                 IdeaBox(idea: game.idea, action: game.refreshIdea)
             }
             .disabled(game.screen != .drawing)
-            .padding(.horizontal, 20).padding(.vertical, 6)
+            .padding(.horizontal, 16).padding(.vertical, 8)
             .frame(maxWidth: 680)
+            .overlay(alignment: .top) { InkDivider().padding(.horizontal, 16) }
         }
+        .modifier(InkWindow())
     }
 
     private var resultView: some View {
@@ -241,13 +242,12 @@ struct ContentView: View {
             }
             .foregroundStyle(Ink.black)
             .dynamicTypeSize(...DynamicTypeSize.accessibility1)
-            .padding(.horizontal, 20).padding(.top, 8)
+            .padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 10)
+            .overlay(alignment: .bottom) { InkDivider() }
 
             if let image = game.resultImage {
-                Image(uiImage: image).resizable().scaledToFit()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.horizontal, 14)
-                    .accessibilityLabel("Finished drawing")
+                DoodleArtworkPreview(image: image, label: "Finished drawing")
+                    .padding(.horizontal, 18)
                     .accessibilityIdentifier("finishedImage")
                 HStack(spacing: 20) {
                     PhotoExportButton(image: image)
@@ -255,7 +255,7 @@ struct ContentView: View {
                         shareImage = ShareImage(image: image, caption: game.savedRecord?.shareCaption ?? "Made with Just Doodle. #JustDoodle")
                     }
                     .accessibilityIdentifier("shareDrawing")
-                    IconButton(systemName: "square.grid.2x2", label: "Doodle Book") {
+                    IconButton(systemName: "folder", label: "Doodle Book") {
                         game.returnHome()
                         game.screen = .archive
                     }
@@ -264,6 +264,9 @@ struct ContentView: View {
                         .disabled(game.savedRecord == nil || game.isSaving)
                         .accessibilityIdentifier("backHome")
                 }
+                .frame(maxWidth: 420).padding(.top, 6)
+                .overlay(alignment: .top) { InkDivider() }
+                .padding(.horizontal, 20)
             } else {
                 Spacer()
                 Text("Your drawing could not be prepared.").foregroundStyle(Ink.red)
@@ -282,9 +285,11 @@ struct ContentView: View {
                     .buttonStyle(InkCommandStyle())
                     .disabled(game.isSaving)
                     .accessibilityIdentifier("drawAgain")
+                    .padding(.horizontal, 24)
             }
         }
-        .padding(.horizontal, 16).padding(.bottom, 12)
+        .padding(.bottom, 16)
+        .modifier(InkWindow())
     }
 
     private var challengesView: some View {
@@ -304,9 +309,12 @@ struct ContentView: View {
                     }
                     .padding(.top, 28)
                 }
-                .frame(maxWidth: 620).padding(16).frame(maxWidth: .infinity)
+                .frame(maxWidth: 620).padding(.horizontal, 24).padding(.vertical, 16).frame(maxWidth: .infinity)
+                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
             }
+            .clipped().padding(.bottom, 14)
         }
+        .modifier(InkWindow())
     }
 
     private var archiveView: some View {
@@ -317,13 +325,31 @@ struct ContentView: View {
                 Button("Retry") { Task { await archive.load() } }.frame(minHeight: 44)
             } else if archive.records.isEmpty {
                 Spacer()
-                Image("DoodlersClubMark").resizable().scaledToFit().frame(width: 100, height: 100)
-                Text("Nothing here yet.").font(.doodleBody(24)).padding()
+                VStack(spacing: 16) {
+                    Image("DoodlersClubMark").resizable().scaledToFit().frame(width: 100, height: 100)
+                        .accessibilityHidden(true)
+                    Text("Nothing here yet.").font(.doodleTitle(26))
+                    Button { game.begin(.classic, reduceMotion: reduceMotion) } label: {
+                        Label("Start drawing", systemImage: "pencil")
+                    }
+                    .buttonStyle(InkCommandStyle())
+                    .disabled(!game.canBegin)
+                    .accessibilityIdentifier("startFromBook")
+                }
+                .padding(24).modifier(InkArrival())
                 Spacer()
             } else {
+                HStack {
+                    Text("\(archive.records.count) \(archive.records.count == 1 ? "page" : "pages")")
+                    Spacer()
+                    Image(systemName: "clock.arrow.circlepath")
+                        .accessibilityHidden(true)
+                }
+                .font(.doodleBody(16)).foregroundStyle(Ink.black.opacity(0.65))
+                .padding(.horizontal, 26).padding(.top, 14)
                 archiveSearchField
                 ScrollView {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 145, maximum: 280), spacing: 16)], spacing: 20) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 132, maximum: 280), spacing: 16)], spacing: 20) {
                         ForEach(visibleRecords) { record in
                             Button { selectedRecord = record } label: {
                                 DoodleThumbnail(record: record, archive: archive)
@@ -333,9 +359,10 @@ struct ContentView: View {
                             .accessibilityIdentifier("archiveDrawing")
                         }
                     }
-                    .frame(maxWidth: 980).padding(20).frame(maxWidth: .infinity)
+                    .frame(maxWidth: 980).padding(24).frame(maxWidth: .infinity)
                 }
                 .scrollDismissesKeyboard(.interactively)
+                .clipped().padding(.bottom, 14)
                 .refreshable { await archive.load() }
                 .overlay {
                     if visibleRecords.isEmpty {
@@ -345,6 +372,7 @@ struct ContentView: View {
                 }
             }
         }
+        .modifier(InkWindow())
         .task { await archive.load() }
     }
 
@@ -362,19 +390,13 @@ struct ContentView: View {
                 IconButton(systemName: "xmark", label: "Clear search") { archiveSearch = "" }
             }
         }
-        .frame(minHeight: 48)
-        .overlay(alignment: .bottom) { HandUnderline().stroke(Ink.black.opacity(0.3), lineWidth: 1).frame(height: 4) }
-        .frame(maxWidth: 940).padding(.horizontal, 24).padding(.bottom, 8)
+        .padding(.horizontal, 14).frame(minHeight: 52)
+        .overlay { HandDrawnBox().stroke(Ink.black, lineWidth: 1.5).allowsHitTesting(false) }
+        .frame(maxWidth: 940).padding(.horizontal, 20).padding(.top, 6).padding(.bottom, 8)
     }
 
     private func pageHeader(_ title: String) -> some View {
-        HStack(spacing: 10) {
-            IconButton(systemName: "chevron.left", label: "Back to home") { game.screen = .home }
-            Text(title).font(.doodleTitle(30)).lineLimit(1).minimumScaleFactor(0.7)
-                .overlay(alignment: .bottom) { HandUnderline().stroke(Ink.blue, lineWidth: 2).frame(height: 3) }
-            Spacer(minLength: 0)
-        }
-        .foregroundStyle(Ink.black).padding(.horizontal, 16).padding(.vertical, 6)
+        InkPageHeader(title: title) { game.screen = .home }
     }
 }
 
@@ -399,8 +421,7 @@ struct DoodleThumbnail: View {
                 }
             }
             .aspectRatio(1200.0 / 1760.0, contentMode: .fit)
-            .overlay(Rectangle().stroke(Ink.black.opacity(0.15), lineWidth: 1))
-            .shadow(color: Ink.black.opacity(0.08), radius: 2, x: 2, y: 3)
+            .overlay(HandDrawnBox().stroke(Ink.black, lineWidth: 1.5).padding(-5))
             Text(record.sessionTitle ?? "Classic")
                 .font(.doodleTitle(17)).foregroundStyle(Ink.black).lineLimit(1)
             Text(record.createdAt.doodleDate)

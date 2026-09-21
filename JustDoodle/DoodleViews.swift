@@ -9,7 +9,7 @@ struct DoodlersClubSplash: View {
 
     var body: some View {
         ZStack {
-            NotebookBackground(ruled: true)
+            NotebookBackground()
 
             VStack(spacing: 18) {
                 Image("DoodlersClubMark")
@@ -29,6 +29,7 @@ struct DoodlersClubSplash: View {
             .scaleEffect(inkVisible || reduceMotion ? 1 : 0.94)
             .rotationEffect(.degrees(inkVisible || reduceMotion ? 0 : -4))
         }
+        .modifier(InkWindow())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("The Doodler's Club")
         .onAppear {
@@ -72,6 +73,20 @@ struct ScribbleSurface: View {
     }
 }
 
+struct DoodleArtworkPreview: View {
+    let image: UIImage
+    let label: String
+
+    var body: some View {
+        // Bound the image to the space left by the header and actions, not its ideal size.
+        GeometryReader { bounds in
+            Image(uiImage: image).resizable().scaledToFit()
+                .frame(width: bounds.size.width, height: bounds.size.height)
+                .accessibilityLabel(label)
+        }
+    }
+}
+
 struct ChallengePackButton: View {
     let pack: ChallengePack
     let action: () -> Void
@@ -81,11 +96,10 @@ struct ChallengePackButton: View {
             HStack(spacing: 14) {
                 Image(systemName: pack.session.symbol)
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(Ink.blue)
+                    .foregroundStyle(Ink.black)
                     .frame(width: 44, height: 48)
-                    .background(HandDrawnBox().fill(Ink.blue.opacity(0.07)))
-                    .overlay(HandDrawnBox().stroke(Ink.blue.opacity(0.6), lineWidth: 1))
-                    .rotationEffect(.degrees(-4))
+                    .background(HandCircle().fill(accent.opacity(0.24)).frame(width: 40, height: 40))
+                    .overlay(HandCircle().stroke(Ink.black, lineWidth: 1.3).frame(width: 42, height: 42))
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(pack.session.title)
@@ -117,13 +131,21 @@ struct ChallengePackButton: View {
             .padding(.vertical, 18)
             .frame(maxWidth: .infinity, minHeight: 94, alignment: .leading)
             .contentShape(Rectangle())
-            .overlay(alignment: .bottom) { HandUnderline().stroke(Ink.black.opacity(0.16), lineWidth: 1).frame(height: 5) }
+            .overlay(alignment: .bottom) { InkDivider() }
         }
         .buttonStyle(InkPressStyle())
         .accessibilityIdentifier("challenge-\(pack.id)")
         .accessibilityLabel(
             "\(pack.session.title). \(pack.session.instruction). \(pack.session.shortDuration)."
         )
+    }
+
+    private var accent: Color {
+        switch pack.session.inks.count {
+        case 1: return .yellow
+        case 2: return Ink.red
+        default: return Ink.blue
+        }
     }
 }
 
@@ -134,9 +156,7 @@ struct CustomChallengeBuilder: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Make Your Own")
-                .font(.doodleTitle(26))
-                .foregroundStyle(Ink.black)
+            InkSectionTitle(title: "Make Your Own", symbol: "slider.horizontal.3")
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Time")
@@ -336,8 +356,7 @@ struct IconButton: View {
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(filled ? Color.white : Ink.black)
                 .frame(width: 44, height: 44)
-                .background(filled ? Ink.black : Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .background(HandCircle().fill(filled ? Ink.black : Color.clear))
                 .contentShape(Rectangle())
         }
         .buttonStyle(InkPressStyle())
@@ -348,6 +367,7 @@ struct IconButton: View {
 
 struct InkCommandStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.doodleTitle(20))
@@ -356,7 +376,10 @@ struct InkCommandStyle: ButtonStyle {
             .padding(.vertical, 16)
             .frame(minHeight: 48)
             .background(HandDrawnBox().fill(Ink.black.opacity(!isEnabled ? 0.3 : configuration.isPressed ? 0.75 : 1)))
+            .overlay { HandDrawnBox().stroke(Ink.black.opacity(isEnabled ? 1 : 0.3), lineWidth: 1).padding(-3) }
             .contentShape(Rectangle())
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)
+            .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8), value: configuration.isPressed)
     }
 }
 

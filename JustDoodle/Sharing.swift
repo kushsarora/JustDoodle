@@ -44,9 +44,10 @@ struct PhotoExportButton: View {
             }
             .foregroundStyle(Ink.black)
             .frame(width: 44, height: 44)
-            .background(Color.white.opacity(0.55))
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .background(HandCircle().fill(Color.yellow.opacity(0.2)))
+            .overlay(HandCircle().stroke(Ink.black, lineWidth: 1.2))
         }
+        .buttonStyle(InkPressStyle())
         .disabled(isSaving)
         .accessibilityLabel(isSaving ? "Saving to Photos" : "Save to Photos")
         .accessibilityIdentifier("saveToPhotos")

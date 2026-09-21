@@ -126,6 +126,59 @@ struct SketchWindowOutline: Shape {
     }
 }
 
+struct InkWindow: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(NotebookColors.paper)
+            .clipped()
+            .overlay {
+                SketchWindowOutline()
+                    .stroke(Ink.black, style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round))
+                    .allowsHitTesting(false).accessibilityHidden(true)
+            }
+            .padding(.horizontal, 12).padding(.vertical, 10)
+    }
+}
+
+struct InkDivider: View {
+    var body: some View {
+        HandUnderline().stroke(Ink.black, lineWidth: 1.5)
+            .frame(height: 4).accessibilityHidden(true)
+    }
+}
+
+struct InkPageHeader: View {
+    let title: String
+    var symbol: String = "chevron.left"
+    var backLabel: String = "Back to home"
+    let back: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            IconButton(systemName: symbol, label: backLabel, action: back)
+            Text(title).font(.doodleTitle(24)).lineLimit(1).minimumScaleFactor(0.6)
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(Ink.black)
+        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+        .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, 6)
+        .overlay(alignment: .bottom) { InkDivider() }
+    }
+}
+
+struct InkSectionTitle: View {
+    let title: String
+    let symbol: String
+
+    var body: some View {
+        Label(title, systemImage: symbol)
+            .font(.doodleTitle(21)).foregroundStyle(Ink.black)
+            .padding(.vertical, 8)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
 struct InkArrival: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var arrived = false
