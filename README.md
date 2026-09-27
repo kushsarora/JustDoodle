@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="JustDoodle/Assets.xcassets/AppIcon.appiconset/JustDoodleAppIcon.png" width="120" alt="Just Doodle handwritten signature on notebook paper">
+  <img src="JustDoodle/Assets.xcassets/AppIcon.appiconset/JustDoodleAppIcon.png" width="120" alt="Just Doodle jd. handwritten monogram with a blue underline">
 </p>
 
 <h1 align="center">Just Doodle</h1>
@@ -24,6 +24,8 @@ Just Doodle starts with an imperfect line. Turn it into something unexpected bef
 
 **Native SwiftUI + PencilKit. iOS 16+. No accounts, ads, or external dependencies.**
 
+The September 27 signature refresh includes a new app icon, transparent monogram, and matching wordmarks. See the [branding kit](Branding/README.md) for the assets and [Apple launch guide](AppStore/GETTING_STARTED.md) for the owner-facing release steps.
+
 ## A Look Inside
 
 <table>
@@ -39,7 +41,7 @@ Just Doodle starts with an imperfect line. Turn it into something unexpected bef
   </tr>
 </table>
 
-Actual simulator captures, September 17-19, 2026. Drawings contain automated test strokes, not finished App Store artwork. Tap any image for full size, or browse the [complete gallery](AppStore/ReviewScreenshots/README.md) for challenges, the Doodle Book, settings, large text, and iPad layouts.
+Actual simulator captures: home refreshed September 27, 2026; drawing and result from September 17-19. Drawings contain automated test strokes, not finished App Store artwork. Tap any image for full size, or browse the [complete gallery](AppStore/ReviewScreenshots/README.md) for challenges, the Doodle Book, settings, large text, and iPad layouts.
 
 ## One Line, Lots of Possibilities
 

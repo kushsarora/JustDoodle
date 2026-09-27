@@ -8,7 +8,7 @@ These are **real, unedited simulator captures** from automated workflows. The sh
 
 ## Start, Draw, Finish
 
-iPhone SE (3rd generation), September 17-19, 2026. Result and saved-preview images include the September 19 image-sizing hardening.
+iPhone SE (3rd generation). Home and large-text home were refreshed September 27, 2026 with the new signature and monogram. Other iPhone SE captures are from September 17-19; result and saved-preview images include the September 19 image-sizing hardening.
 
 <table>
   <tr><th>Home</th><th>Drawing</th><th>Finished drawing</th></tr>
@@ -62,9 +62,9 @@ iPad Pro 13-inch landscape drawing, September 19, 2026.
 <details>
 <summary>Also see the iPad home screen</summary>
 
-Approved home capture from September 11, 2026, retained as a reference. It predates the September 17-19 app-wide captures above.
+Home capture refreshed September 27, 2026 with the new signature and monogram, following the passing iPad home navigation and accessibility check.
 
-<a href="iPad-Home.png"><img src="iPad-Home.png" width="620" alt="Earlier approved iPad home screen with the handwritten Just Doodle identity"></a>
+<a href="iPad-Home.png"><img src="iPad-Home.png" width="620" alt="iPad home screen with the refreshed Just Doodle signature and jd. monogram"></a>
 
 </details>
 

@@ -2,6 +2,18 @@
 
 Core release-candidate verification completed September 9, 2026; release packaging resumed September 10. A subsequent home-screen design iteration is documented below. Nothing has been submitted to the App Store.
 
+## September 27 Branding Refresh
+
+Replaced the paper-text app icon and star badge with a black `jd.` signature and blue underline. Added a matching transparent home wordmark, keeping the existing drawn underline animation, VoiceOver label, and heading semantics. The compact mark appears in the home header, splash, and empty book. A full club logo and the generation record are in [the branding kit](../Branding/README.md). Game rules, storage, and export behavior are unchanged.
+
+`/private/tmp/JustDoodle-September27-Branding-Checked.xcresult` passed all 27 unit tests and two selected UI tests on iPhone SE: home navigation/wordmark accessibility and bounds, plus large-text home/drawing/result controls. Home and large-text home screenshots were inspected and refreshed in the gallery. The earlier `JustDoodle-September27-Branding.xcresult` attempt used incorrect test-target filters and ran no tests; it is not verification evidence.
+
+The unsigned device Release archive at `/private/tmp/JustDoodle-September27-Release.xcarchive` built successfully and passed `scripts/validate-archive.sh`. The source icon is 1024 x 1024 with no alpha channel; both in-app wordmark/monogram PNGs have alpha channels. Asset-catalog JSON, file references, documentation links, and diff whitespace were checked. This archive includes the new branding and supersedes the September 20 archive for reviewing the current appearance; it is not signed for distribution or uploaded.
+
+`/private/tmp/JustDoodle-September27-iPad-Branding-Retry.xcresult` passed the home navigation, wordmark accessibility, and bounds test on iPad Pro 13-inch. Its home capture was visually inspected and refreshed in the gallery. The first iPad attempt timed out waiting for the automation runner's accessibility initialization before executing the test; the successful warm-simulator retry supersedes it.
+
+The new [owner's launch guide](GETTING_STARTED.md) explains the remaining Apple steps with official sources checked September 27. Owner approval of the branding, signing, policy hosting, real-device/TestFlight testing, final listing screenshots, and App Review remain release gates.
+
 ## Home Screen Iteration
 
 The September 10-11 home redesign follows the owner's hand-drawn window reference: a double-stroked frame, compact club title bar, animated scribble, bold Start drawing control, and direct Doodle Book/Challenges rows. Resume, discard, settings, and saved-page counts remain connected to the existing game state. Other game screens and rules are unchanged.

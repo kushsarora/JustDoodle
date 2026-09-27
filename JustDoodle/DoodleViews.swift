@@ -401,9 +401,14 @@ struct HomeMasthead: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Text("Just Doodle.")
-                .font(.doodleTitle(43)).lineLimit(1).minimumScaleFactor(0.55)
-                .foregroundStyle(Ink.black)
+            Image("JustDoodleWordmark")
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: 330)
+                .frame(height: 82)
+                .accessibilityLabel("Just Doodle")
+                .accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("brandWordmark")
             HandUnderline().trim(from: 0, to: signed ? 1 : 0)
                 .stroke(Ink.blue, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                 .frame(width: 176, height: 8)

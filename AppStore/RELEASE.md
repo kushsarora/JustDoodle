@@ -2,6 +2,8 @@
 
 This repository can produce a tested release candidate. An unsigned local archive is not an App Store upload.
 
+First time publishing? Start with the [owner's Apple launch guide](GETTING_STARTED.md) for enrollment, signing, App Store Connect, and TestFlight.
+
 ## Local Verification
 
 Use Xcode 26 or later. iOS 16 remains the minimum supported operating system; the build SDK is newer.

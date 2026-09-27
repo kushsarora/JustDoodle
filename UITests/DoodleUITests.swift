@@ -68,6 +68,10 @@ final class DoodleUITests: XCTestCase {
 
     func testHomeNavigationFitsWindow() {
         let window = app.windows.firstMatch.frame
+        let wordmark = app.images["brandWordmark"]
+        XCTAssertTrue(wordmark.exists)
+        XCTAssertEqual(wordmark.label, "Just Doodle")
+        XCTAssertTrue(window.contains(wordmark.frame))
         for identifier in ["startClassic", "doodleBook", "challenges", "settings"] {
             let control = app.buttons[identifier]
             XCTAssertTrue(control.isHittable, identifier)
