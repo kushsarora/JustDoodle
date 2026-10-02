@@ -194,6 +194,18 @@ final class DoodleUITests: XCTestCase {
         XCTAssertTrue(app.buttons["startClassic"].waitForExistence(timeout: 5))
     }
 
+    private func verifyCredits() {
+        let scrollView = app.scrollViews.firstMatch
+        scrollView.swipeUp()
+        let visibleContent = scrollView.frame.insetBy(dx: 0, dy: 12)
+        for name in ["Kush Arora", "Jennie Cho", "UW-Madison"] {
+            let credit = app.staticTexts[name]
+            XCTAssertTrue(credit.isHittable, name)
+            XCTAssertTrue(visibleContent.contains(credit.frame), name)
+        }
+        screenshot("Credits")
+    }
+
     func testSettingsAndPrivacy() {
         app.buttons["settings"].tap()
         XCTAssertTrue(app.switches["hapticsToggle"].waitForExistence(timeout: 5))
@@ -205,6 +217,7 @@ final class DoodleUITests: XCTestCase {
         screenshot("Privacy Policy")
         app.buttons["Back to settings"].tap()
         XCTAssertEqual(app.switches["hapticsToggle"].value as? String, vibration)
+        verifyCredits()
         app.buttons["Back to home"].tap()
         XCTAssertTrue(app.buttons["startClassic"].waitForExistence(timeout: 5))
     }
@@ -222,6 +235,7 @@ final class DoodleUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Your drawings belong to you."].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Back to settings"].isHittable)
         app.buttons["Back to settings"].tap()
+        verifyCredits()
         app.buttons["Back to home"].tap()
         app.buttons["challenges"].tap()
         XCTAssertTrue(app.buttons["challenge-build-it"].isHittable)

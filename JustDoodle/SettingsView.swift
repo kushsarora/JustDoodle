@@ -56,6 +56,15 @@ struct SettingsView: View {
                                 }
                                 .buttonStyle(InkPressStyle())
                             }
+                            VStack(alignment: .leading, spacing: 10) {
+                                InkSectionTitle(title: "Credits", symbol: "person.2")
+                                Text("Kush Arora").font(.doodleTitle(23))
+                                Text("Jennie Cho").font(.doodleTitle(23))
+                                Text("UW-Madison").font(.doodleBody(20))
+                                    .foregroundStyle(Ink.blue)
+                                InkDivider()
+                            }
+                            .fixedSize(horizontal: false, vertical: true)
                             VStack(spacing: 10) {
                                 Image("DoodlersClubMark").resizable().scaledToFit()
                                     .frame(width: 72, height: 72).accessibilityHidden(true)
